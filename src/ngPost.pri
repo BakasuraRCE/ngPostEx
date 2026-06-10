@@ -29,6 +29,7 @@ win32: {
 # we need the console to be able to print stuff in command line mode...
 # we hide the console if we start in GUI mode
     CONFIG += console
+    LIBS += -luser32
 }
 
 macx: {
