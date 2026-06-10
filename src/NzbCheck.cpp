@@ -43,7 +43,21 @@ void NzbCheck::onDisconnected(NntpCheckCon *con)
             _cout << "\n" << MB_FLUSH;
         }
 
-        if (!_quietMode)
+        if (_nbCheckedArticles == 0 && _nbTotalArticles > 0)
+        {
+            _cerr << tr("ERROR: check FAILED - no articles could be verified (0/%1). "
+                        "All connections were refused or dropped. "
+                        "Another program may be using all available connections on the server(s).").arg(
+                         _nbTotalArticles) << "\n" << MB_FLUSH;
+        }
+        else if (_nbCheckedArticles < _nbTotalArticles)
+        {
+            _cerr << tr("ERROR: check INCOMPLETE - only %1/%2 articles were verified. "
+                        "Some connections failed (possibly max connections reached on server). "
+                        "Results are unreliable.").arg(
+                         _nbCheckedArticles).arg(_nbTotalArticles) << "\n" << MB_FLUSH;
+        }
+        else if (!_quietMode)
         {
             qint64 duration = _timeStart.elapsed();
             _cout << tr("Nb Missing Article(s): %1/%2 (check done in %3 (%4 sec) using %5 connections on %6 server(s))").arg(
@@ -86,7 +100,8 @@ NzbCheck::NzbCheck():QObject(),
     _nntpServers(),
     _debug(0), _connections(),
     _dispProgressBar(false), _progressbarTimer(), _refreshRate(sDefaultRefreshRate),
-    _quietMode(false)
+    _quietMode(false),
+    _nbMaxRetry(5), _socketTimeOut(30000)
 {}
 
 NzbCheck::~NzbCheck()

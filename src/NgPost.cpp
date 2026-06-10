@@ -50,9 +50,9 @@
   #include <QStorageInfo>
 #endif
 
-const char *NgPost::sAppName          = "ngPost";
+const char *NgPost::sAppName          = "ngPostEx";
 const QString NgPost::sVersion        = QString::number(APP_VERSION);
-const QString NgPost::sProFileURL     = "https://raw.githubusercontent.com/mbruel/ngPost/master/src/ngPost.pri";
+const QString NgPost::sProFileURL     = "https://raw.githubusercontent.com/BakasuraRCE/ngPostEx/master/src/ngPost.pri";
 const QString NgPost::sDonationURL    = "https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=W2C236U6JNTUA&item_name=ngPost&currency_code=EUR";
 const QString NgPost::sDonationBtcURL = "https://github.com/mbruel/ngPost#donations";
 
@@ -1337,6 +1337,8 @@ bool NgPost::parseCommandLine(int argc, char *argv[])
         _nzbCheck->setDebug(_debug);
         _nzbCheck->setDispProgressBar(_dispProgressBar||_dispFilesPosting);
         _nzbCheck->setQuiet(_quiet);
+        _nzbCheck->setNbMaxRetry(NntpArticle::nbMaxTrySending());
+        _nzbCheck->setSocketTimeOut(_socketTimeOut);
         int nbArticles = _nzbCheck->parseNzb(parser.value(sOptionNames[Opt::CHECK]));
         if (nbArticles > 0 )
         {
@@ -2831,11 +2833,11 @@ void NgPost::addMonitoringFolder(const QString &dirPath)
 }
 
 const QString NgPost::sNgPostASCII = QString("\
-                   __________               __\n\
-       ____    ____\\______   \\____  _______/  |_\n\
-      /    \\  / ___\\|     ___/  _ \\/  ___/\\   __\\\n\
-     |   |  \\/ /_/  >    |  (  <_> )___ \\  |  |\n\
-     |___|  /\\___  /|____|   \\____/____  > |__|\n\
-          \\//_____/                    \\/\n\
+                   __________               __  ___________\n\
+       ____    ____\\______   \\____  _______/  |_\\_   _____/__  __\n\
+      /    \\  / ___\\|     ___/  _ \\/  ___/\\   __\\|    __)_\\  \\/  /\n\
+     |   |  \\/ /_/  >    |  (  <_> )___ \\  |  | |        \\>    <\n\
+     |___|  /\\___  /|____|   \\____/____  > |__|/_______  /__/\\_ \\\n\
+          \\//_____/                    \\/               \\/      \\/\n\
 ");
 

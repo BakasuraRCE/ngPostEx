@@ -1,8 +1,43 @@
+# Build output directories
+build/
+build_cmd/
+
+# Qt generated files
 .qmake.stash
 *.o
 Makefile
-src/ngPost
 moc_*.cpp
 ui_*.h
 moc_predefs.h
 qrc_resources.cpp
+
+# Binaries
+src/ngPost
+src/ngPostEx
+ngPostEx
+ngPost
+
+# Packaging artifacts
+*.AppImage
+*.dmg
+*.exe
+*.zip
+
+# IDE files
+*.pro.user
+*.pro.user.*
+*.qbs.user
+*.qbs.user.*
+*.moc
+*.prl
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# nzbCheck subproject build artifacts
+nzbCheck/src/*.o
+nzbCheck/src/nzbCheck
+nzbCheck/src/Makefile
+nzbCheck/src/.qmake.stash
+nzbCheck/src/moc_*.cpp

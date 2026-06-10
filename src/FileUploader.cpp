@@ -72,7 +72,7 @@ void FileUploader::startUpload(const QUrl &serverUrl)
 
 
             QNetworkRequest req(_nzbUrl);
-            req.setRawHeader( "User-Agent" , "ngPost C++ app" );
+            req.setRawHeader( "User-Agent" , "ngPostEx C++ app" );
 
             _reply = _netMgr.post(req, multiPart);
 

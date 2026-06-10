@@ -46,6 +46,7 @@ private:
 
     PostingState   _postingState;
     QString        _currentArticle;
+    ushort         _nbDisconnected;  //!< number of times this connection was disconnected (for retry logic)
 
 public:
     NntpCheckCon(NzbCheck *nzbCheck, int id, const NntpServerParams &srvParams);

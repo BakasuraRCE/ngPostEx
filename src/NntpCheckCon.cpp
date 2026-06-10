@@ -27,7 +27,8 @@ NntpCheckCon::NntpCheckCon(NzbCheck *nzbCheck, int id, const NntpServerParams &s
       _nzbCheck(nzbCheck), _id(id), _srvParams(srvParams),
       _socket(nullptr), _isConnected(false),
       _postingState(PostingState::NOT_CONNECTED),
-      _currentArticle()
+      _currentArticle(),
+      _nbDisconnected(0)
 {
     connect(this, &NntpCheckCon::startConnection, this, &NntpCheckCon::onStartConnection, Qt::QueuedConnection);
     connect(this, &NntpCheckCon::killConnection,  this, &NntpCheckCon::onKillConnection,  Qt::QueuedConnection);
@@ -120,7 +121,19 @@ void NntpCheckCon::onDisconnected()
         _socket->deleteLater();
         _socket = nullptr;
     }
-    emit disconnected(this);
+
+    // Retry logic: if we still have articles to check and haven't exceeded max retries, reconnect
+    if (!_currentArticle.isNull() && _nbDisconnected++ < _nzbCheck->nbMaxRetry())
+    {
+        _nzbCheck->error(tr("[Con #%1] Connection lost, trying to reconnect (attempt %2/%3)").arg(
+                             _id).arg(_nbDisconnected).arg(_nzbCheck->nbMaxRetry()));
+        _postingState = PostingState::NOT_CONNECTED;
+        emit startConnection();
+    }
+    else
+    {
+        emit disconnected(this);
+    }
 }
 
 void NntpCheckCon::onReadyRead()
@@ -230,7 +243,19 @@ void NntpCheckCon::_closeConnection()
         if (_socket)
             _socket->deleteLater();
         _socket = nullptr;
-        emit disconnected(this);
+
+        // Retry logic for connections that never succeeded
+        if (_nbDisconnected++ < _nzbCheck->nbMaxRetry())
+        {
+            _nzbCheck->error(tr("[Con #%1] Connection failed, retrying (attempt %2/%3)").arg(
+                                 _id).arg(_nbDisconnected).arg(_nzbCheck->nbMaxRetry()));
+            _postingState = PostingState::NOT_CONNECTED;
+            emit startConnection();
+        }
+        else
+        {
+            emit disconnected(this);
+        }
     }
 }
 

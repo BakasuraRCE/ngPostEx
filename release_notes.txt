@@ -1,18 +1,32 @@
 
-                  __________               __
-      ____    ____\______   \____  _______/  |_
-     /    \  / ___\|     ___/  _ \/  ___/\   __\
-    |   |  \/ /_/  >    |  (  <_> )___ \  |  |
-    |___|  /\___  /|____|   \____/____  > |__|
-         \//_____/                    \/
+                  __________               __  ___________
+      ____    ____\______   \____  _______/  |_\_   _____/__  __
+     /    \  / ___\|     ___/  _ \/  ___/\   __\|    __)_\  \/  /
+    |   |  \/ /_/  >    |  (  <_> )___ \  |  | |        \>    <
+    |___|  /\___  /|____|   \____/____  > |__|/_______  /__/\_ \
+         \//_____/                    \/               \/      \/
 
 
+ngPostEx - Fork of ngPost by Matthieu Bruel
+Maintainer: BakasuraRCE <bakasura@protonmail.ch>
+Original: https://github.com/mbruel/ngPost
 
-TODO: --nfo option (cf github issue #10 and NewsUp dev)
 
-TODO: include ParPar instead of par2cmdline?
+####################################################
+###       Release: ngPostEx v5.0                 ###
+###       date:    2025/06/10                    ###
+####################################################
 
-TODO: auto RAR size and par2 parameters depending on the inputs size?
+- Fork of ngPost v4.16, renamed to ngPostEx
+
+- Fix: --check now properly reports when no articles could be verified
+  (e.g., all connections refused because another program is using them).
+  Previously it falsely reported "0 missing articles" as if everything was OK.
+
+- Version bumped to 5.0 to start fresh as a fork
+
+- Default config file changed to ~/.ngPostEx (Linux) / ngPostEx.conf (Windows)
+
 
 ####################################################
 ###       Release: ngPost v4.16                  ###

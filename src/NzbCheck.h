@@ -68,6 +68,8 @@ private:
 
     QElapsedTimer     _timeStart;
     int               _nbCons;
+    ushort            _nbMaxRetry;    //!< max retries per connection (same as retry config)
+    int               _socketTimeOut; //!< socket timeout in ms
 
     static const int sDefaultRefreshRate  = 200; //!< how often shall we refresh the progressbar bar?
     static const int sprogressbarBarWidth = 50;
@@ -93,6 +95,11 @@ public:
     inline void checkPost(const QList<NntpServerParams*> &nntpServers);
     inline void setDispProgressBar(bool display);
     inline void setQuiet(bool quiet);
+    inline void setNbMaxRetry(ushort nbMax);
+    inline void setSocketTimeOut(int timeoutMs);
+
+    inline ushort nbMaxRetry() const;
+    inline int socketTimeOut() const;
 
 
     inline void missingArticle(const QString &article);
@@ -126,6 +133,11 @@ void NzbCheck::checkPost(const QList<NntpServerParams *> &nntpServers)
 
 void NzbCheck::setDispProgressBar(bool display) { _dispProgressBar = display; }
 void NzbCheck::setQuiet(bool quiet) { _quietMode = quiet; }
+void NzbCheck::setNbMaxRetry(ushort nbMax) { _nbMaxRetry = nbMax; }
+void NzbCheck::setSocketTimeOut(int timeoutMs) { _socketTimeOut = timeoutMs; }
+
+ushort NzbCheck::nbMaxRetry() const { return _nbMaxRetry; }
+int NzbCheck::socketTimeOut() const { return _socketTimeOut; }
 
 void NzbCheck::missingArticle(const QString &article)
 {

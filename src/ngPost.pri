@@ -1,9 +1,9 @@
 QT += core network
 
-DEFINES += "APP_VERSION=\"4.16\""
+DEFINES += "APP_VERSION=\"5.0\""
 
 INCLUDEPATH += $$PWD
-TARGET = ngPost
+TARGET = ngPostEx
 TEMPLATE = app
 CONFIG += c++14
 CONFIG -= app_bundle

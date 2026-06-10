@@ -264,12 +264,12 @@ private:
     static constexpr const char *sDefaultMsgIdSignature = "ngPost";
 #if defined(WIN32) || defined(__MINGW64__)
     static constexpr const char *sDefaultNzbPath = ""; //!< local folder
-    static constexpr const char *sDefaultConfig = "ngPost.conf";
+    static constexpr const char *sDefaultConfig = "ngPostEx.conf";
 #else
     static constexpr const char *sDefaultNzbPath = "/tmp";
-    static constexpr const char *sDefaultConfig = ".ngPost";
+    static constexpr const char *sDefaultConfig = ".ngPostEx";
 #endif
-    static constexpr const char *sDefaultLogFile = "ngPost.log";
+    static constexpr const char *sDefaultLogFile = "ngPostEx.log";
 
 
     static const int sprogressbarBarWidth = 50;
