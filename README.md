@@ -177,7 +177,7 @@ Original project: https://github.com/mbruel/ngPost
 
 ```
 Copyright (C) 2020 Matthieu Bruel <Matthieu.Bruel@gmail.com>
-Copyright (C) 2025 BakasuraRCE
+Copyright (C) 2026 BakasuraRCE
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by

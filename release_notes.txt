@@ -14,7 +14,7 @@ Original: https://github.com/mbruel/ngPost
 
 ####################################################
 ###       Release: ngPostEx v5.0                 ###
-###       date:    2025/06/10                    ###
+###       date:    2026/06/10                    ###
 ####################################################
 
 - Fork of ngPost v4.16, renamed to ngPostEx
