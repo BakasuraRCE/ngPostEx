@@ -10,9 +10,9 @@ permissions:
 
 jobs:
   # ===========================================
-  # Linux x86_64 - GUI AppImage
+  # Linux x86_64 - GUI & CMD
   # ===========================================
-  linux-x86_64-gui:
+  linux-x86_64:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
@@ -37,13 +37,19 @@ jobs:
 
       - name: Build GUI version
         run: |
-          mkdir build && cd build
+          mkdir build-gui && cd build-gui
           qmake6 ../src/ngPost.pro CONFIG+=release
           make -j$(nproc)
 
-      - name: Create AppImage
+      - name: Build CMD version
         run: |
-          cd build
+          mkdir build-cmd && cd build-cmd
+          qmake6 ../src/ngPost_cmd.pro CONFIG+=release
+          make -j$(nproc)
+
+      - name: Create GUI AppImage
+        run: |
+          cd build-gui
           wget -q https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
           wget -q https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-x86_64.AppImage
           chmod +x linuxdeploy-x86_64.AppImage linuxdeploy-plugin-qt-x86_64.AppImage
@@ -67,44 +73,9 @@ jobs:
           ./linuxdeploy-x86_64.AppImage --appdir AppDir --plugin qt --output appimage
           mv ngPostEx-*.AppImage ngPostEx_${GITHUB_REF_NAME}-x86_64.AppImage
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: linux-x86_64-gui
-          path: build/ngPostEx_*-x86_64.AppImage
-
-  # ===========================================
-  # Linux x86_64 - CMD only AppImage
-  # ===========================================
-  linux-x86_64-cmd:
-    runs-on: ubuntu-22.04
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install dependencies
+      - name: Create CMD AppImage
         run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            build-essential \
-            qt6-base-dev \
-            qt6-tools-dev \
-            qt6-tools-dev-tools \
-            libqt6core6 \
-            libqt6network6 \
-            libgl1-mesa-dev \
-            libssl-dev \
-            libfuse2 \
-            file
-
-      - name: Build CMD version
-        run: |
-          mkdir build && cd build
-          qmake6 ../src/ngPost_cmd.pro CONFIG+=release
-          make -j$(nproc)
-
-      - name: Create AppImage
-        run: |
-          cd build
+          cd build-cmd
           wget -q https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
           wget -q https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-x86_64.AppImage
           chmod +x linuxdeploy-x86_64.AppImage linuxdeploy-plugin-qt-x86_64.AppImage
@@ -129,147 +100,117 @@ jobs:
           ./linuxdeploy-x86_64.AppImage --appdir AppDir --plugin qt --output appimage
           mv ngPostEx-*.AppImage ngPostEx_${GITHUB_REF_NAME}_cmd-x86_64.AppImage
 
-      - name: Upload artifact
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: linux-x86_64-cmd
-          path: build/ngPostEx_*_cmd-x86_64.AppImage
+          name: linux-x86_64
+          path: |
+            build-gui/ngPostEx_*-x86_64.AppImage
+            build-cmd/ngPostEx_*_cmd-x86_64.AppImage
 
   # ===========================================
-  # Linux ARM64 - GUI AppImage
+  # Linux ARM64 - GUI & CMD (native ARM runner)
   # ===========================================
-  linux-arm64-gui:
-    runs-on: ubuntu-22.04
+  linux-arm64:
+    runs-on: ubuntu-22.04-arm
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build ARM64 GUI in container
-        uses: uraimo/run-on-arch-action@v2
-        with:
-          arch: aarch64
-          distro: ubuntu22.04
-          githubToken: ${{ github.token }}
-          dockerRunArgs: --volume "${PWD}:/workspace"
-          install: |
-            apt-get update
-            apt-get install -y \
-              build-essential \
-              qt6-base-dev \
-              qt6-tools-dev \
-              qt6-tools-dev-tools \
-              libqt6core6 \
-              libqt6gui6 \
-              libqt6widgets6 \
-              libqt6network6 \
-              libgl1-mesa-dev \
-              libssl-dev \
-              libfuse2 \
-              file \
-              wget
-          run: |
-            cd /workspace
-            mkdir -p build && cd build
-            qmake6 ../src/ngPost.pro CONFIG+=release
-            make -j$(nproc)
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            qt6-base-dev \
+            qt6-tools-dev \
+            qt6-tools-dev-tools \
+            qt6-l10n-tools \
+            libqt6core6 \
+            libqt6gui6 \
+            libqt6widgets6 \
+            libqt6network6 \
+            libgl1-mesa-dev \
+            libssl-dev \
+            libfuse2 \
+            file
 
-            wget -q https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-aarch64.AppImage
-            wget -q https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-aarch64.AppImage
-            chmod +x linuxdeploy-aarch64.AppImage linuxdeploy-plugin-qt-aarch64.AppImage
+      - name: Build GUI version
+        run: |
+          mkdir build-gui && cd build-gui
+          qmake6 ../src/ngPost.pro CONFIG+=release
+          make -j$(nproc)
 
-            mkdir -p AppDir/usr/bin AppDir/usr/share/applications AppDir/usr/share/icons/hicolor/256x256/apps
-            cp ngPostEx AppDir/usr/bin/
-            cp ../src/resources/icons/ngPost.png AppDir/usr/share/icons/hicolor/256x256/apps/ngPostEx.png
+      - name: Build CMD version
+        run: |
+          mkdir build-cmd && cd build-cmd
+          qmake6 ../src/ngPost_cmd.pro CONFIG+=release
+          make -j$(nproc)
 
-            cat > AppDir/usr/share/applications/ngPostEx.desktop << 'EOF'
-            [Desktop Entry]
-            Type=Application
-            Name=ngPostEx
-            Exec=ngPostEx
-            Icon=ngPostEx
-            Categories=Network;
-            Comment=Usenet binary poster
-            EOF
-            sed -i 's/^            //' AppDir/usr/share/applications/ngPostEx.desktop
+      - name: Create GUI AppImage
+        run: |
+          cd build-gui
+          wget -q https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-aarch64.AppImage
+          wget -q https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-aarch64.AppImage
+          chmod +x linuxdeploy-aarch64.AppImage linuxdeploy-plugin-qt-aarch64.AppImage
 
-            export QMAKE=qmake6
-            ./linuxdeploy-aarch64.AppImage --appdir AppDir --plugin qt --output appimage
-            mv ngPostEx-*.AppImage ngPostEx_${GITHUB_REF_NAME}-aarch64.AppImage
+          mkdir -p AppDir/usr/bin AppDir/usr/share/applications AppDir/usr/share/icons/hicolor/256x256/apps
+          cp ngPostEx AppDir/usr/bin/
+          cp ../src/resources/icons/ngPost.png AppDir/usr/share/icons/hicolor/256x256/apps/ngPostEx.png
 
-      - name: Upload artifact
+          cat > AppDir/usr/share/applications/ngPostEx.desktop << 'EOF'
+          [Desktop Entry]
+          Type=Application
+          Name=ngPostEx
+          Exec=ngPostEx
+          Icon=ngPostEx
+          Categories=Network;
+          Comment=Usenet binary poster
+          EOF
+          sed -i 's/^          //' AppDir/usr/share/applications/ngPostEx.desktop
+
+          export QMAKE=qmake6
+          ./linuxdeploy-aarch64.AppImage --appdir AppDir --plugin qt --output appimage
+          mv ngPostEx-*.AppImage ngPostEx_${GITHUB_REF_NAME}-aarch64.AppImage
+
+      - name: Create CMD AppImage
+        run: |
+          cd build-cmd
+          wget -q https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-aarch64.AppImage
+          wget -q https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-aarch64.AppImage
+          chmod +x linuxdeploy-aarch64.AppImage linuxdeploy-plugin-qt-aarch64.AppImage
+
+          mkdir -p AppDir/usr/bin AppDir/usr/share/applications AppDir/usr/share/icons/hicolor/256x256/apps
+          cp ngPostEx AppDir/usr/bin/
+          cp ../src/resources/icons/ngPost.png AppDir/usr/share/icons/hicolor/256x256/apps/ngPostEx.png
+
+          cat > AppDir/usr/share/applications/ngPostEx.desktop << 'EOF'
+          [Desktop Entry]
+          Type=Application
+          Name=ngPostEx
+          Exec=ngPostEx
+          Icon=ngPostEx
+          Categories=Network;
+          Comment=Usenet binary poster (CMD)
+          Terminal=true
+          EOF
+          sed -i 's/^          //' AppDir/usr/share/applications/ngPostEx.desktop
+
+          export QMAKE=qmake6
+          ./linuxdeploy-aarch64.AppImage --appdir AppDir --plugin qt --output appimage
+          mv ngPostEx-*.AppImage ngPostEx_${GITHUB_REF_NAME}_cmd-aarch64.AppImage
+
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: linux-arm64-gui
-          path: build/ngPostEx_*-aarch64.AppImage
+          name: linux-arm64
+          path: |
+            build-gui/ngPostEx_*-aarch64.AppImage
+            build-cmd/ngPostEx_*_cmd-aarch64.AppImage
 
   # ===========================================
-  # Linux ARM64 - CMD only AppImage
+  # Windows x64 - GUI & CMD
   # ===========================================
-  linux-arm64-cmd:
-    runs-on: ubuntu-22.04
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Build ARM64 CMD in container
-        uses: uraimo/run-on-arch-action@v2
-        with:
-          arch: aarch64
-          distro: ubuntu22.04
-          githubToken: ${{ github.token }}
-          dockerRunArgs: --volume "${PWD}:/workspace"
-          install: |
-            apt-get update
-            apt-get install -y \
-              build-essential \
-              qt6-base-dev \
-              qt6-tools-dev \
-              qt6-tools-dev-tools \
-              libqt6core6 \
-              libqt6network6 \
-              libgl1-mesa-dev \
-              libssl-dev \
-              libfuse2 \
-              file \
-              wget
-          run: |
-            cd /workspace
-            mkdir -p build && cd build
-            qmake6 ../src/ngPost_cmd.pro CONFIG+=release
-            make -j$(nproc)
-
-            wget -q https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-aarch64.AppImage
-            wget -q https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-aarch64.AppImage
-            chmod +x linuxdeploy-aarch64.AppImage linuxdeploy-plugin-qt-aarch64.AppImage
-
-            mkdir -p AppDir/usr/bin AppDir/usr/share/applications AppDir/usr/share/icons/hicolor/256x256/apps
-            cp ngPostEx AppDir/usr/bin/
-            cp ../src/resources/icons/ngPost.png AppDir/usr/share/icons/hicolor/256x256/apps/ngPostEx.png
-
-            cat > AppDir/usr/share/applications/ngPostEx.desktop << 'EOF'
-            [Desktop Entry]
-            Type=Application
-            Name=ngPostEx
-            Exec=ngPostEx
-            Icon=ngPostEx
-            Categories=Network;
-            Comment=Usenet binary poster (CMD)
-            Terminal=true
-            EOF
-            sed -i 's/^            //' AppDir/usr/share/applications/ngPostEx.desktop
-
-            export QMAKE=qmake6
-            ./linuxdeploy-aarch64.AppImage --appdir AppDir --plugin qt --output appimage
-            mv ngPostEx-*.AppImage ngPostEx_${GITHUB_REF_NAME}_cmd-aarch64.AppImage
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: linux-arm64-cmd
-          path: build/ngPostEx_*_cmd-aarch64.AppImage
-
-  # ===========================================
-  # Windows x64 - GUI
-  # ===========================================
-  windows-x64-gui:
+  windows-x64:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -287,18 +228,26 @@ jobs:
         with:
           arch: x64
 
-      - name: Build
+      - name: Build GUI
         shell: cmd
         run: |
-          mkdir build
-          cd build
+          mkdir build-gui
+          cd build-gui
           qmake ..\src\ngPost.pro CONFIG+=release
           nmake
 
-      - name: Package
+      - name: Build CMD
+        shell: cmd
+        run: |
+          mkdir build-cmd
+          cd build-cmd
+          qmake ..\src\ngPost_cmd.pro CONFIG+=release
+          nmake
+
+      - name: Package GUI
         shell: pwsh
         run: |
-          cd build/release
+          cd build-gui/release
           windeployqt --release --no-translations ngPostEx.exe
           $sslPath = "$env:Qt6_DIR/bin"
           if (Test-Path "$sslPath/libssl-3-x64.dll") {
@@ -307,45 +256,10 @@ jobs:
           }
           Compress-Archive -Path * -DestinationPath "ngPostEx_${{ github.ref_name }}_win-x64.zip"
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: windows-x64-gui
-          path: build/release/ngPostEx_*_win-x64.zip
-
-  # ===========================================
-  # Windows x64 - CMD
-  # ===========================================
-  windows-x64-cmd:
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install Qt
-        uses: jurplel/install-qt-action@v4
-        with:
-          version: '6.7.*'
-          host: 'windows'
-          target: 'desktop'
-          arch: 'win64_msvc2019_64'
-
-      - name: Setup MSVC
-        uses: ilammy/msvc-dev-cmd@v1
-        with:
-          arch: x64
-
-      - name: Build
-        shell: cmd
-        run: |
-          mkdir build
-          cd build
-          qmake ..\src\ngPost_cmd.pro CONFIG+=release
-          nmake
-
-      - name: Package
+      - name: Package CMD
         shell: pwsh
         run: |
-          cd build/release
+          cd build-cmd/release
           windeployqt --release --no-translations ngPostEx.exe
           $sslPath = "$env:Qt6_DIR/bin"
           if (Test-Path "$sslPath/libssl-3-x64.dll") {
@@ -354,16 +268,18 @@ jobs:
           }
           Compress-Archive -Path * -DestinationPath "ngPostEx_${{ github.ref_name }}_cmd_win-x64.zip"
 
-      - name: Upload artifact
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: windows-x64-cmd
-          path: build/release/ngPostEx_*_cmd_win-x64.zip
+          name: windows-x64
+          path: |
+            build-gui/release/ngPostEx_*_win-x64.zip
+            build-cmd/release/ngPostEx_*_cmd_win-x64.zip
 
   # ===========================================
-  # macOS - GUI
+  # macOS - GUI & CMD
   # ===========================================
-  macos-gui:
+  macos:
     runs-on: macos-13
     steps:
       - uses: actions/checkout@v4
@@ -376,72 +292,44 @@ jobs:
           target: 'desktop'
           arch: 'clang_64'
 
-      - name: Build
+      - name: Build GUI
         run: |
-          mkdir build && cd build
+          mkdir build-gui && cd build-gui
           qmake ../src/ngPost.pro CONFIG+=release
           make -j$(sysctl -n hw.ncpu)
 
-      - name: Create DMG
+      - name: Build CMD
         run: |
-          cd build
-          macdeployqt ngPostEx.app -dmg
-          mv ngPostEx.dmg ngPostEx_${GITHUB_REF_NAME}_macos.dmg
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: macos-gui
-          path: build/ngPostEx_*_macos.dmg
-
-  # ===========================================
-  # macOS - CMD
-  # ===========================================
-  macos-cmd:
-    runs-on: macos-13
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install Qt
-        uses: jurplel/install-qt-action@v4
-        with:
-          version: '6.7.*'
-          host: 'mac'
-          target: 'desktop'
-          arch: 'clang_64'
-
-      - name: Build
-        run: |
-          mkdir build && cd build
+          mkdir build-cmd && cd build-cmd
           qmake ../src/ngPost_cmd.pro CONFIG+=release
           make -j$(sysctl -n hw.ncpu)
 
-      - name: Package
+      - name: Package GUI (DMG)
         run: |
-          cd build
+          cd build-gui
+          macdeployqt ngPostEx.app -dmg
+          mv ngPostEx.dmg ngPostEx_${GITHUB_REF_NAME}_macos.dmg
+
+      - name: Package CMD (tar.gz)
+        run: |
+          cd build-cmd
           mkdir -p pkg
           cp ngPostEx pkg/
           tar -czf ngPostEx_${GITHUB_REF_NAME}_cmd_macos.tar.gz -C pkg .
 
-      - name: Upload artifact
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: macos-cmd
-          path: build/ngPostEx_*_cmd_macos.tar.gz
+          name: macos
+          path: |
+            build-gui/ngPostEx_*_macos.dmg
+            build-cmd/ngPostEx_*_cmd_macos.tar.gz
 
   # ===========================================
   # Create GitHub Release
   # ===========================================
   release:
-    needs:
-      - linux-x86_64-gui
-      - linux-x86_64-cmd
-      - linux-arm64-gui
-      - linux-arm64-cmd
-      - windows-x64-gui
-      - windows-x64-cmd
-      - macos-gui
-      - macos-cmd
+    needs: [linux-x86_64, linux-arm64, windows-x64, macos]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
