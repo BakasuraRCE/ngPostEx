@@ -119,6 +119,19 @@ ngPostEx --conf ~/.ngPostEx --check /chemin/vers/fichier.nzb
 
 Assurez-vous qu'au moins un serveur dans votre config a `nzbCheck = true`.
 
+### Audit d'obfuscation NZB :
+
+Un outil Python est inclus pour analyser le niveau d'obfuscation de vos posts :
+```bash
+# Analyse offline (métadonnées NZB uniquement)
+python3 tools/nzb_obfuscation_check.py monpost.nzb
+
+# Analyse complète avec vérification serveur (headers + corps yEnc)
+python3 tools/nzb_obfuscation_check.py monpost.nzb --conf ~/.ngPostEx
+```
+
+Donne un score (0-100%) et détaille ce qu'un indexeur pourrait déduire de votre post.
+
 ## Configuration
 
 Le fichier de configuration par défaut est : **~/.ngPostEx** (Linux/macOS) ou **ngPostEx.conf** (Windows).

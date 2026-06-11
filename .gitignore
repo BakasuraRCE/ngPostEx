@@ -41,3 +41,7 @@ nzbCheck/src/nzbCheck
 nzbCheck/src/Makefile
 nzbCheck/src/.qmake.stash
 nzbCheck/src/moc_*.cpp
+
+# Test files in tools (user-specific)
+tools/*.nzb
+tools/*.conf
