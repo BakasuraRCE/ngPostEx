@@ -157,7 +157,7 @@ See [ngPost.conf](ngPost.conf) for an example.
 - **PREPARE_PACKING**: prepare packing of next post while uploading current one
 - **NZB_POST_CMD**: execute a command/script after each post
 - **RAR_EXTRA**: customize rar/7z command arguments
-- **PAR2_CMD**: path to alternative par2 generator (ParPar, MultiPar)
+- **PAR2_PATH**: path to alternative par2 generator (ParPar, MultiPar)
 - **PAR2_ARGS**: customize par2 command arguments
 - **TMP_RAM**: temporary folder with size constraint (e.g. tmpfs partition)
 - **TMP_RAM_RATIO**: ratio for par2 size estimation on TMP_RAM

@@ -131,7 +131,7 @@ Voir [ngPost.conf](ngPost.conf) pour un exemple.
 - **NZB_POST_CMD** : commande exécutée après chaque post
 - **PREPARE_PACKING** : préparer le packing du prochain post pendant l'upload
 - **RAR_EXTRA** : options supplémentaires pour rar/7z
-- **PAR2_CMD** / **PAR2_ARGS** : commande par2 alternative (ParPar, MultiPar)
+- **PAR2_PATH** / **PAR2_ARGS** : commande par2 alternative (ParPar, MultiPar)
 - **TMP_RAM** : dossier temporaire en RAM (partition tmpfs)
 
 ## Crédits
