@@ -13,23 +13,20 @@ jobs:
   # Linux x86_64 - GUI & CMD
   # ===========================================
   linux-x86_64:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install dependencies
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.8.*'
+
+      - name: Install build dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y \
             build-essential \
-            qt6-base-dev \
-            qt6-tools-dev \
-            qt6-tools-dev-tools \
-            qt6-l10n-tools \
-            libqt6core6 \
-            libqt6gui6 \
-            libqt6widgets6 \
-            libqt6network6 \
             libgl1-mesa-dev \
             libssl-dev \
             libfuse2 \
@@ -38,13 +35,13 @@ jobs:
       - name: Build GUI version
         run: |
           mkdir build-gui && cd build-gui
-          qmake6 ../src/ngPost.pro CONFIG+=release
+          qmake ../src/ngPost.pro CONFIG+=release
           make -j$(nproc)
 
       - name: Build CMD version
         run: |
           mkdir build-cmd && cd build-cmd
-          qmake6 ../src/ngPost_cmd.pro CONFIG+=release
+          qmake ../src/ngPost_cmd.pro CONFIG+=release
           make -j$(nproc)
 
       - name: Create GUI AppImage
@@ -69,7 +66,7 @@ jobs:
           EOF
           sed -i 's/^          //' AppDir/usr/share/applications/ngPostEx.desktop
 
-          export QMAKE=qmake6
+          export QMAKE=qmake
           ./linuxdeploy-x86_64.AppImage --appdir AppDir --plugin qt --output appimage
           mv ngPostEx-*.AppImage ngPostEx_${GITHUB_REF_NAME}-x86_64.AppImage
 
@@ -96,7 +93,7 @@ jobs:
           EOF
           sed -i 's/^          //' AppDir/usr/share/applications/ngPostEx.desktop
 
-          export QMAKE=qmake6
+          export QMAKE=qmake
           ./linuxdeploy-x86_64.AppImage --appdir AppDir --plugin qt --output appimage
           mv ngPostEx-*.AppImage ngPostEx_${GITHUB_REF_NAME}_cmd-x86_64.AppImage
 
@@ -112,23 +109,20 @@ jobs:
   # Linux ARM64 - GUI & CMD (native ARM runner)
   # ===========================================
   linux-arm64:
-    runs-on: ubuntu-22.04-arm
+    runs-on: ubuntu-24.04-arm
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install dependencies
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.8.*'
+
+      - name: Install build dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y \
             build-essential \
-            qt6-base-dev \
-            qt6-tools-dev \
-            qt6-tools-dev-tools \
-            qt6-l10n-tools \
-            libqt6core6 \
-            libqt6gui6 \
-            libqt6widgets6 \
-            libqt6network6 \
             libgl1-mesa-dev \
             libssl-dev \
             libfuse2 \
@@ -137,13 +131,13 @@ jobs:
       - name: Build GUI version
         run: |
           mkdir build-gui && cd build-gui
-          qmake6 ../src/ngPost.pro CONFIG+=release
+          qmake ../src/ngPost.pro CONFIG+=release
           make -j$(nproc)
 
       - name: Build CMD version
         run: |
           mkdir build-cmd && cd build-cmd
-          qmake6 ../src/ngPost_cmd.pro CONFIG+=release
+          qmake ../src/ngPost_cmd.pro CONFIG+=release
           make -j$(nproc)
 
       - name: Create GUI AppImage
@@ -168,7 +162,7 @@ jobs:
           EOF
           sed -i 's/^          //' AppDir/usr/share/applications/ngPostEx.desktop
 
-          export QMAKE=qmake6
+          export QMAKE=qmake
           ./linuxdeploy-aarch64.AppImage --appdir AppDir --plugin qt --output appimage
           mv ngPostEx-*.AppImage ngPostEx_${GITHUB_REF_NAME}-aarch64.AppImage
 
@@ -195,7 +189,7 @@ jobs:
           EOF
           sed -i 's/^          //' AppDir/usr/share/applications/ngPostEx.desktop
 
-          export QMAKE=qmake6
+          export QMAKE=qmake
           ./linuxdeploy-aarch64.AppImage --appdir AppDir --plugin qt --output appimage
           mv ngPostEx-*.AppImage ngPostEx_${GITHUB_REF_NAME}_cmd-aarch64.AppImage
 
@@ -218,10 +212,7 @@ jobs:
       - name: Install Qt
         uses: jurplel/install-qt-action@v4
         with:
-          version: '6.7.*'
-          host: 'windows'
-          target: 'desktop'
-          arch: 'win64_msvc2019_64'
+          version: '6.8.*'
 
       - name: Setup MSVC
         uses: ilammy/msvc-dev-cmd@v1
@@ -332,7 +323,7 @@ jobs:
             | **Linux x86_64** | `ngPostEx_*-x86_64.AppImage` | `ngPostEx_*_cmd-x86_64.AppImage` |
             | **Linux ARM64** | `ngPostEx_*-aarch64.AppImage` | `ngPostEx_*_cmd-aarch64.AppImage` |
             | **Windows x64** | `ngPostEx_*_win-x64.zip` | `ngPostEx_*_cmd_win-x64.zip` |
-            | **macOS (Intel)** | `ngPostEx_*_macos.dmg` | `ngPostEx_*_cmd_macos.tar.gz` |
+            | **macOS (ARM)** | `ngPostEx_*_macos.dmg` | `ngPostEx_*_cmd_macos.tar.gz` |
 
             ### Notes
             - **GUI** versions include the graphical interface but also work from command line.
@@ -390,17 +381,14 @@ jobs:
   # macOS - GUI & CMD (independent, appends to release)
   # ===========================================
   macos:
-    runs-on: macos-13
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
 
       - name: Install Qt
         uses: jurplel/install-qt-action@v4
         with:
-          version: '6.7.*'
-          host: 'mac'
-          target: 'desktop'
-          arch: 'clang_64'
+          version: '6.8.*'
 
       - name: Build GUI
         run: |
