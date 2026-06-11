@@ -1899,7 +1899,7 @@ QString NgPost::_parseConfig(const QString &configPath)
                 if (args.size() >= 2)
                 {
                     QString opt = args.takeFirst().trimmed().toLower(),
-                            val = args.at(0).trimmed();
+                            val = args.join("=").trimmed();
                     bool ok = false;
                     if (opt == sOptionNames[Opt::THREAD])
                     {

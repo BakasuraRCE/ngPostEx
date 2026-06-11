@@ -13,6 +13,21 @@ Original: https://github.com/mbruel/ngPost
 
 
 ####################################################
+###       Release: ngPostEx v5.2                 ###
+###       date:    2026/06/10                    ###
+####################################################
+
+- Fix: Config file parsing now handles special characters in passwords (#219).
+  Passwords containing '=' were truncated (e.g., "MyP@ss=word!" became "MyP@ss").
+  Now the full value after the first '=' is preserved correctly.
+
+- Fix: CI release job no longer fails due to Docker cache artifact download.
+  Release now explicitly downloads only the build artifacts it needs.
+
+- Docs: Fixed PAR2_CMD → PAR2_PATH in README documentation (#154).
+
+
+####################################################
 ###       Release: ngPostEx v5.1                 ###
 ###       date:    2026/06/10                    ###
 ####################################################
