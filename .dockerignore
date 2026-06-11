@@ -1,0 +1,12 @@
+build/
+build-*/
+.git/
+*.AppImage
+*.zip
+*.dmg
+*.o
+*.obj
+moc_*
+ui_*
+qrc_*
+Makefile
