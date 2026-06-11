@@ -13,6 +13,22 @@ Original: https://github.com/mbruel/ngPost
 
 
 ####################################################
+###       Release: ngPostEx v5.1                 ###
+###       date:    2026/06/10                    ###
+####################################################
+
+- Fix: Windows build - link user32.lib for ShowWindow/GetConsoleWindow
+- Fix: Windows build - remove deprecated QRegExp, use QString::replace (Qt6 compat)
+- Fix: Windows packaging - exclude build artifacts (.obj, moc_*.cpp) from zip
+- CI: Separate macOS build to avoid blocking release on slow runner allocation
+- CI: Consolidate GUI+CMD builds per platform into single jobs
+- CI: Add Docker image build and publish to GitHub Container Registry (ghcr.io)
+- Docker: Updated Dockerfile to Debian 12 + Qt6 + CMD-only build
+- Updated postFiles.sh, ngPost.desktop, ngPost.sh to reference ngPostEx
+- Renamed ngPost.docker.conf to ngPostEx.docker.conf
+
+
+####################################################
 ###       Release: ngPostEx v5.0                 ###
 ###       date:    2026/06/10                    ###
 ####################################################

@@ -1,9 +1,9 @@
 [Desktop Entry]
 Type=Application
-Name=ngPost
-Exec=ngPost %F
-Icon=ngPost
-Comment=Edit this default file
+Name=ngPostEx
+Exec=ngPostEx %F
+Icon=ngPostEx
+Comment=Usenet binary poster
 Terminal=true
 Categories=Network;
 X-AppImage-Version=

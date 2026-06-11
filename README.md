@@ -1,6 +1,6 @@
 <img align="left" width="80" height="80" src="https://raw.githubusercontent.com/BakasuraRCE/ngPostEx/master/src/resources/icons/ngPost.png" alt="ngPostEx">
 
-# ngPostEx v5.0
+# ngPostEx v5.1
 
 **A fork of [ngPost](https://github.com/mbruel/ngPost) by Matthieu Bruel**
 

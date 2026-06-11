@@ -1,24 +1,36 @@
 # Usage:
-# Assuming you want to share the "files" subdirectory
-# and your ngPost config is ngPost.docker.conf.
-# $ docker build -t ngpost .
-# $ docker run -it -v $PWD/files:/root/files -v $PWD/ngPost.docker.conf:/root/.ngPost ngpost ARGUMENTS
+# $ docker build -t ngpostex .
+# $ docker run -it -v $PWD/files:/root/files -v $PWD/ngPostEx.conf:/root/.ngPostEx ngpostex ARGUMENTS
+#
+# Or pull from GitHub Container Registry:
+# $ docker pull ghcr.io/bakasurarce/ngpostex:latest
+# $ docker run -it -v $PWD/files:/root/files -v $PWD/ngPostEx.conf:/root/.ngPostEx ghcr.io/bakasurarce/ngpostex ARGUMENTS
 
-FROM debian:10
+FROM debian:12-slim
 
-RUN sed -i 's/main$/main non-free/' /etc/apt/sources.list
 RUN apt-get update && apt-get install --no-install-recommends -y \
-    git build-essential qt5-qmake qt5-default par2 rar ca-certificates \
+    build-essential \
+    qt6-base-dev \
+    qt6-tools-dev \
+    qt6-tools-dev-tools \
+    libqt6core6 \
+    libqt6network6 \
+    libssl-dev \
+    par2 \
+    p7zip-full \
+    ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-COPY . /usr/src/ngPost
-WORKDIR /usr/src/ngPost/src
+COPY . /usr/src/ngPostEx
+WORKDIR /usr/src/ngPostEx/src
 
-ENV QT_SELECT=qt5-x86_64-linux-gnu
-RUN git clean -fx && qmake && make -j$(nproc)
-RUN ln -s /usr/src/ngPost/src/ngPost /usr/local/bin/ngPost
+RUN mkdir -p /usr/src/ngPostEx/build && cd /usr/src/ngPostEx/build \
+    && qmake6 ../src/ngPost_cmd.pro CONFIG+=release \
+    && make -j$(nproc) \
+    && cp ngPostEx /usr/local/bin/ngPostEx \
+    && rm -rf /usr/src/ngPostEx/build
 
 WORKDIR /root
 VOLUME /root/files
 
-ENTRYPOINT [ "ngPost" ]
+ENTRYPOINT ["ngPostEx"]

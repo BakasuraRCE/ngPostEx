@@ -1,5 +1,5 @@
 #!/bin/sh
-QT_VERSION=5.11.3
+QT_VERSION=6
 LIBS=./libs
 
 export QT_PLUGIN_PATH=$LIBS/plugins/
@@ -10,4 +10,4 @@ export QT_PLUGIN_PATH=$LIBS/plugins/
 export LD_LIBRARY_PATH=$LIBS:$LD_LIBRARY_PATH
 
 SCRIPT_PATH=`dirname "$0"`
-$SCRIPT_PATH/bin/ngPost "$@"
+$SCRIPT_PATH/bin/ngPostEx "$@"

@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Script to upload a file on Usenet using ngPost (https://github.com/mbruel/ngPost)
+# Script to upload a file on Usenet using ngPostEx (https://github.com/BakasuraRCE/ngPostEx)
 # it's goal it's to do the split and the par2 generation in a temp folder prior to upload it
 #
 
@@ -15,7 +15,7 @@ LIBS="$SCRIPT_PATH/libs"
 
 export QT_PLUGIN_PATH=$LIBS/plugins/
 
-NG_POST="$SCRIPT_PATH/src/ngPost"
+NG_POST="$SCRIPT_PATH/src/ngPostEx"
 NZB_PATH="$SCRIPT_PATH/nzb"
 TMP_FOLDER=/tmp
 
@@ -118,7 +118,7 @@ fi
 
 
 #6.: generate random from
-FROM="$(pwgen -cBsn 11 1)@ngPost.com"
+FROM="$(pwgen -cBsn 11 1)@ngPostEx.com"
 echo "RAR_NAME: $RAR_NAME, PASS: $PASS, NZBFILE: $NZBFILE, FROM: $FROM"
 
 
