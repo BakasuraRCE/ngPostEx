@@ -30,6 +30,10 @@ Original: https://github.com/mbruel/ngPost
   Renaming files on disk triggered the folder monitor to detect them as new files.
   Filename obfuscation is now automatically disabled for monitoring posts.
 
+- Fix: Monitoring large file copy - "file in use by another process" error (#112).
+  After the size-stable check, now also verifies the file is not locked before
+  processing. Waits up to 30 additional intervals for the lock to be released.
+
 
 ####################################################
 ###       Release: ngPostEx v5.1                 ###

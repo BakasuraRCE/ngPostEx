@@ -1,7 +1,8 @@
 //========================================================================
 //
 // Copyright (C) 2020 Matthieu Bruel <Matthieu.Bruel@gmail.com>
-// This file is a part of ngPost : https://github.com/mbruel/ngPost
+// Copyright (C) 2026 BakasuraRCE <bakasura@protonmail.ch>
+// This file is a part of ngPostEx : https://github.com/BakasuraRCE/ngPostEx
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -23,6 +24,7 @@
 #include <QDir>
 #include <QDateTime>
 #include <QThread>
+#include <QFile>
 
 ulong FoldersMonitorForNewFiles::sMSleep = 1000; //!< 1sec in case we move file from samba or unrar when the system is quite loaded
 
@@ -100,7 +102,7 @@ void FoldersMonitorForNewFiles::onDirectoryChanged(const QString &folderPath)
                  << ", size: " << size << ", lastModif: " << fi.lastModified();
 
 
-        // wait the file is fully written
+        // wait the file is fully written (size stable check)
         ushort nbWait = 0;
         do
         {
@@ -108,6 +110,30 @@ void FoldersMonitorForNewFiles::onDirectoryChanged(const QString &folderPath)
             QThread::msleep(sMSleep);
             ++nbWait;
         } while (fi.exists() && size != _pathSize(fi));
+
+        // Additional check: verify the file is not locked by another process (#112).
+        // On Windows, a file being copied may report its final size immediately
+        // but remain locked until the copy completes.
+        if (fi.exists() && !fi.isDir())
+        {
+            ushort nbLockRetries = 0;
+            const ushort maxLockRetries = 30; // max 30 * sMSleep additional wait
+            while (nbLockRetries < maxLockRetries)
+            {
+                QFile testOpen(fi.absoluteFilePath());
+                if (testOpen.open(QIODevice::ReadWrite))
+                {
+                    testOpen.close();
+                    break; // file is not locked
+                }
+                QThread::msleep(sMSleep);
+                ++nbLockRetries;
+                ++nbWait;
+            }
+            if (nbLockRetries >= maxLockRetries)
+                qDebug() << "[directoryChanged] WARNING: file may still be locked after "
+                         << nbWait * sMSleep << " msec: " << filePath;
+        }
 
 
         if (fi.exists())
