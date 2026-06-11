@@ -492,7 +492,9 @@ jobs:
 
       - name: Smoke test Docker image
         run: |
-          output=$(docker run --rm ghcr.io/${{ github.repository_owner }}/ngpostex:latest --help 2>&1 || true)
+          IMAGE="ghcr.io/${{ github.repository_owner }}/ngpostex:latest"
+          IMAGE=$(echo "$IMAGE" | tr '[:upper:]' '[:lower:]')
+          output=$(docker run --rm "$IMAGE" --help 2>&1 || true)
           echo "$output" | head -20
           echo "$output" | grep -q "SSL support: yes" || { echo "FAIL: Docker SSL not enabled"; exit 1; }
           echo "OK: Docker smoke test passed"
