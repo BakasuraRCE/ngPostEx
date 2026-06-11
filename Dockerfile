@@ -94,6 +94,10 @@ COPY --from=builder /usr/src/ngPostEx/build/ngPostEx /usr/local/bin/ngPostEx
 
 RUN ldconfig
 
+# Smoke test: verify binary starts and SSL is functional
+RUN ngPostEx --help 2>&1 | grep -q "SSL support: yes" \
+    || { echo "FAIL: SSL not enabled in Docker image"; exit 1; }
+
 ENV LANG=C.UTF-8
 ENV QT_PLUGIN_PATH=/usr/local/lib/qt6/plugins
 

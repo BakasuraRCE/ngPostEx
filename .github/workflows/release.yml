@@ -44,6 +44,14 @@ jobs:
           qmake ../src/ngPost_cmd.pro CONFIG+=release
           make -j$(nproc)
 
+      - name: Smoke test CMD
+        run: |
+          cd build-cmd
+          output=$(./ngPostEx --help 2>&1 || true)
+          echo "$output" | head -20
+          echo "$output" | grep -q "SSL support: yes" || { echo "FAIL: SSL not enabled"; exit 1; }
+          echo "OK: CMD smoke test passed"
+
       - name: Create GUI AppImage
         run: |
           cd build-gui
@@ -97,6 +105,15 @@ jobs:
           ./linuxdeploy-x86_64.AppImage --appdir AppDir --plugin qt --output appimage
           mv ngPostEx-*.AppImage ngPostEx_${GITHUB_REF_NAME}_cmd-x86_64.AppImage
 
+      - name: Smoke test AppImages
+        run: |
+          chmod +x build-gui/ngPostEx_*-x86_64.AppImage build-cmd/ngPostEx_*_cmd-x86_64.AppImage
+          gui_output=$(build-gui/ngPostEx_*-x86_64.AppImage --help 2>&1 || true)
+          echo "$gui_output" | grep -q "SSL support: yes" || { echo "FAIL: GUI AppImage SSL not enabled"; exit 1; }
+          cmd_output=$(build-cmd/ngPostEx_*_cmd-x86_64.AppImage --help 2>&1 || true)
+          echo "$cmd_output" | grep -q "SSL support: yes" || { echo "FAIL: CMD AppImage SSL not enabled"; exit 1; }
+          echo "OK: AppImage smoke tests passed"
+
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -139,6 +156,14 @@ jobs:
           mkdir build-cmd && cd build-cmd
           qmake ../src/ngPost_cmd.pro CONFIG+=release
           make -j$(nproc)
+
+      - name: Smoke test CMD
+        run: |
+          cd build-cmd
+          output=$(./ngPostEx --help 2>&1 || true)
+          echo "$output" | head -20
+          echo "$output" | grep -q "SSL support: yes" || { echo "FAIL: SSL not enabled"; exit 1; }
+          echo "OK: CMD smoke test passed"
 
       - name: Create GUI AppImage
         run: |
@@ -192,6 +217,15 @@ jobs:
           export QMAKE=qmake
           ./linuxdeploy-aarch64.AppImage --appdir AppDir --plugin qt --output appimage
           mv ngPostEx-*.AppImage ngPostEx_${GITHUB_REF_NAME}_cmd-aarch64.AppImage
+
+      - name: Smoke test AppImages
+        run: |
+          chmod +x build-gui/ngPostEx_*-aarch64.AppImage build-cmd/ngPostEx_*_cmd-aarch64.AppImage
+          gui_output=$(build-gui/ngPostEx_*-aarch64.AppImage --help 2>&1 || true)
+          echo "$gui_output" | grep -q "SSL support: yes" || { echo "FAIL: GUI AppImage SSL not enabled"; exit 1; }
+          cmd_output=$(build-cmd/ngPostEx_*_cmd-aarch64.AppImage --help 2>&1 || true)
+          echo "$cmd_output" | grep -q "SSL support: yes" || { echo "FAIL: CMD AppImage SSL not enabled"; exit 1; }
+          echo "OK: AppImage smoke tests passed"
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -263,6 +297,15 @@ jobs:
           }
           Compress-Archive -Path * -DestinationPath "ngPostEx_${{ github.ref_name }}_cmd_win-x64.zip"
 
+      - name: Smoke test
+        shell: pwsh
+        run: |
+          $gui_output = & dist-gui/ngPostEx.exe --help 2>&1 | Out-String
+          if ($gui_output -notmatch "SSL support: yes") { Write-Error "FAIL: GUI SSL not enabled"; exit 1 }
+          $cmd_output = & dist-cmd/ngPostEx.exe --help 2>&1 | Out-String
+          if ($cmd_output -notmatch "SSL support: yes") { Write-Error "FAIL: CMD SSL not enabled"; exit 1 }
+          Write-Host "OK: Windows smoke tests passed"
+
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -272,36 +315,93 @@ jobs:
             dist-cmd/ngPostEx_*_cmd_win-x64.zip
 
   # ===========================================
-  # Create GitHub Release (Linux + Windows)
+  # macOS ARM - GUI & CMD
+  # ===========================================
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.8.*'
+
+      - name: Install dependencies
+        run: |
+          brew install par2
+
+      - name: Build GUI
+        run: |
+          # Provide par2 binary and parpar placeholder for app bundle
+          cp $(which par2) src/par2
+          touch src/parpar
+          cp LICENSE src/LICENSE
+          mkdir build-gui && cd build-gui
+          qmake ../src/ngPost.pro CONFIG+=release
+          make -j$(sysctl -n hw.ncpu)
+
+      - name: Build CMD
+        run: |
+          mkdir build-cmd && cd build-cmd
+          qmake ../src/ngPost_cmd.pro CONFIG+=release CONFIG-=app_bundle
+          make -j$(sysctl -n hw.ncpu)
+
+      - name: Smoke test CMD
+        run: |
+          cd build-cmd
+          output=$(./ngPostEx --help 2>&1 || true)
+          echo "$output" | head -20
+          echo "$output" | grep -q "SSL support: yes" || { echo "FAIL: SSL not enabled"; exit 1; }
+          echo "OK: macOS CMD smoke test passed"
+
+      - name: Package GUI (DMG)
+        run: |
+          cd build-gui
+          macdeployqt ngPostEx.app -dmg
+          mv ngPostEx.dmg ngPostEx_${GITHUB_REF_NAME}_macos.dmg
+
+      - name: Smoke test GUI
+        run: |
+          cd build-gui
+          output=$(./ngPostEx.app/Contents/MacOS/ngPostEx --help 2>&1 || true)
+          echo "$output" | head -20
+          echo "$output" | grep -q "SSL support: yes" || { echo "FAIL: GUI SSL not enabled"; exit 1; }
+          echo "OK: macOS GUI smoke test passed"
+
+      - name: Package CMD (tar.gz)
+        run: |
+          cd build-cmd
+          mkdir -p pkg
+          cp ngPostEx pkg/
+          tar -czf ngPostEx_${GITHUB_REF_NAME}_cmd_macos.tar.gz -C pkg .
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos
+          path: |
+            build-gui/ngPostEx_*_macos.dmg
+            build-cmd/ngPostEx_*_cmd_macos.tar.gz
+
+  # ===========================================
+  # Create GitHub Release
   # ===========================================
   release:
-    needs: [linux-x86_64, linux-arm64, windows-x64]
+    needs: [linux-x86_64, linux-arm64, windows-x64, macos]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Download Linux x86_64 artifacts
+      - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
-          name: linux-x86_64
-          path: artifacts/linux-x86_64
-
-      - name: Download Linux ARM64 artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: linux-arm64
-          path: artifacts/linux-arm64
-
-      - name: Download Windows artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: windows-x64
-          path: artifacts/windows-x64
+          path: artifacts
 
       - name: Collect release files
         run: |
           mkdir release_files
-          find artifacts -type f \( -name "*.AppImage" -o -name "*.zip" \) -exec cp {} release_files/ \;
+          find artifacts -type f \( -name "*.AppImage" -o -name "*.zip" -o -name "*.dmg" -o -name "*.tar.gz" \) -exec cp {} release_files/ \;
           ls -la release_files/
 
       - name: Create Release
@@ -328,9 +428,8 @@ jobs:
             ### Notes
             - **GUI** versions include the graphical interface but also work from command line.
             - **CMD** versions are for headless/server environments without a display server.
-            - All builds use **Qt 6** and **OpenSSL 3**.
+            - All builds use **Qt 6.8 LTS** and **OpenSSL 3**.
             - Default config file: `~/.ngPostEx` (Linux/macOS) or `ngPostEx.conf` (Windows)
-            - macOS builds are added separately when the runner becomes available.
 
           files: release_files/*
           draft: false
@@ -376,56 +475,11 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          load: true
 
-  # ===========================================
-  # macOS - GUI & CMD (independent, appends to release)
-  # ===========================================
-  macos:
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install Qt
-        uses: jurplel/install-qt-action@v4
-        with:
-          version: '6.8.*'
-
-      - name: Install dependencies
+      - name: Smoke test Docker image
         run: |
-          brew install par2
-
-      - name: Build GUI
-        run: |
-          # Provide par2 binary and parpar placeholder for app bundle
-          cp $(which par2) src/par2
-          touch src/parpar
-          cp LICENSE src/LICENSE
-          mkdir build-gui && cd build-gui
-          qmake ../src/ngPost.pro CONFIG+=release
-          make -j$(sysctl -n hw.ncpu)
-
-      - name: Build CMD
-        run: |
-          mkdir build-cmd && cd build-cmd
-          qmake ../src/ngPost_cmd.pro CONFIG+=release
-          make -j$(sysctl -n hw.ncpu)
-
-      - name: Package GUI (DMG)
-        run: |
-          cd build-gui
-          macdeployqt ngPostEx.app -dmg
-          mv ngPostEx.dmg ngPostEx_${GITHUB_REF_NAME}_macos.dmg
-
-      - name: Package CMD (tar.gz)
-        run: |
-          cd build-cmd
-          mkdir -p pkg
-          cp ngPostEx pkg/
-          tar -czf ngPostEx_${GITHUB_REF_NAME}_cmd_macos.tar.gz -C pkg .
-
-      - name: Upload macOS artifacts to release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: |
-            build-gui/ngPostEx_*_macos.dmg
-            build-cmd/ngPostEx_*_cmd_macos.tar.gz
+          output=$(docker run --rm ghcr.io/${{ github.repository_owner }}/ngpostex:latest --help 2>&1 || true)
+          echo "$output" | head -20
+          echo "$output" | grep -q "SSL support: yes" || { echo "FAIL: Docker SSL not enabled"; exit 1; }
+          echo "OK: Docker smoke test passed"
