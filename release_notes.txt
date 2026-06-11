@@ -27,6 +27,11 @@ Original: https://github.com/mbruel/ngPost
 
 - Default config file changed to ~/.ngPostEx (Linux) / ngPostEx.conf (Windows)
 
+- Fix: yEnc filename obfuscation (Issue #177). When article obfuscation is enabled,
+  the filename in the yEnc body header is now randomized per-segment, preventing
+  indexers like Easynews from correlating articles by parsing the message body.
+  Based on patch by xompage/Tr4il.
+
 
 ####################################################
 ###       Release: ngPost v4.16                  ###

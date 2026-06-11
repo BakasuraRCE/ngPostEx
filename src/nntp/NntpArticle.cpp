@@ -1,7 +1,8 @@
 //========================================================================
 //
 // Copyright (C) 2020 Matthieu Bruel <Matthieu.Bruel@gmail.com>
-// This file is a part of ngPost : https://github.com/mbruel/ngPost
+// Copyright (C) 2026 BakasuraRCE <bakasura@protonmail.ch>
+// This file is a part of ngPostEx : https://github.com/BakasuraRCE/ngPostEx
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -29,13 +30,14 @@
 ushort NntpArticle::sNbMaxTrySending = 5;
 
 NntpArticle::NntpArticle(NntpFile *file, uint part, qint64 pos, qint64 bytes,
-                         const std::string *from, bool obfuscation):
+                         const std::string *from, bool obfuscateArticles):
     _nntpFile(file), _part(part),
     _id(QUuid::createUuid()),
     _from(from),
     _subject(nullptr),
     _body(nullptr),
     _filePos(pos), _fileBytes(bytes),
+    _obfuscateArticles(obfuscateArticles),
     _nbTrySending(0),
     _msgId()
 {
@@ -43,7 +45,7 @@ NntpArticle::NntpArticle(NntpFile *file, uint part, qint64 pos, qint64 bytes,
     connect(this, &NntpArticle::posted, _nntpFile, &NntpFile::onArticlePosted, Qt::QueuedConnection);
     connect(this, &NntpArticle::failed, _nntpFile, &NntpFile::onArticleFailed, Qt::QueuedConnection);
 
-    if (!obfuscation)
+    if (!obfuscateArticles)
     {
         std::stringstream ss;
         ss << _nntpFile->nameWithQuotes().toStdString() << " (" << part << "/" << _nntpFile->nbArticles() << ")";
@@ -54,6 +56,21 @@ NntpArticle::NntpArticle(NntpFile *file, uint part, qint64 pos, qint64 bytes,
     }
 }
 
+static std::string generateRandomYencName(int length)
+{
+    static const char alphanum[] =
+        "0123456789"
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        "abcdefghijklmnopqrstuvwxyz";
+
+    std::string randomString;
+    randomString.reserve(length);
+    for (int i = 0; i < length; ++i)
+        randomString += alphanum[rand() % (sizeof(alphanum) - 1)];
+
+    return randomString;
+}
+
 void NntpArticle::yEncBody(const char data[])
 {
     // do the yEnc encoding
@@ -61,10 +78,21 @@ void NntpArticle::yEncBody(const char data[])
     uchar  *yencBody = new uchar[_fileBytes*2];
     Yenc::encode(data, _fileBytes, yencBody, crc32);
 
+    // Determine filename for yEnc header
+    std::string filename;
+    if (_obfuscateArticles)
+    {
+        // Generate a unique random string per article to prevent indexer correlation
+        const int randomLen = 32 + (rand() % 31); // between 32-62 chars
+        filename = generateRandomYencName(randomLen);
+    }
+    else
+        filename = _nntpFile->fileName();
+
     // format the body
     std::stringstream ss;
     ss << "=ybegin part=" << _part << " total=" << _nntpFile->nbArticles() << " line=128"
-       << " size=" << _nntpFile->fileSize() << " name=" << _nntpFile->fileName() << Nntp::ENDLINE
+       << " size=" << _nntpFile->fileSize() << " name=" << filename << Nntp::ENDLINE
        << "=ypart begin=" << _filePos + 1 << " end=" << _filePos + _fileBytes << Nntp::ENDLINE
        << yencBody << Nntp::ENDLINE
        << "=yend size=" << _fileBytes << " pcrc32=" << std::hex << crc32 << Nntp::ENDLINE

@@ -9,7 +9,13 @@ This fork aims to fix bugs, improve reliability, and add new features on top of 
 
 ## Changes from ngPost
 
-- **v5.0**: Fixed false-positive "0 missing articles" when `--check` is used and all NNTP connections are refused (e.g., max connections already in use by another program). Now properly reports when no articles could be verified.
+- Fixed `--check` false-positive when all connections are refused
+- Fixed yEnc filename obfuscation ([#177](https://github.com/mbruel/ngPost/issues/177))
+- Connection retry logic for `--check` (uses same `retry` config as posting)
+- Removed deprecated `QRegExp` (Qt6 compatibility on Windows)
+- Default config file: `~/.ngPostEx` / `ngPostEx.conf`
+
+See [release_notes.txt](release_notes.txt) for full details.
 
 ## Original Description
 

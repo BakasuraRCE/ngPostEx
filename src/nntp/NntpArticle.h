@@ -1,7 +1,8 @@
 //========================================================================
 //
 // Copyright (C) 2020 Matthieu Bruel <Matthieu.Bruel@gmail.com>
-// This file is a part of ngPost : https://github.com/mbruel/ngPost
+// Copyright (C) 2026 BakasuraRCE <bakasura@protonmail.ch>
+// This file is a part of ngPostEx : https://github.com/BakasuraRCE/ngPostEx
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -53,6 +54,7 @@ private:
 
     const qint64 _filePos;   //!< position in the File (for yEnc header)
     const qint64 _fileBytes; //!< bytes of the original file that are encoded
+    const bool _obfuscateArticles; //!< whether to obfuscate yEnc filename
 
     ushort _nbTrySending;
 

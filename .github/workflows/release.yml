@@ -277,7 +277,59 @@ jobs:
             build-cmd/release/ngPostEx_*_cmd_win-x64.zip
 
   # ===========================================
-  # macOS - GUI & CMD
+  # Create GitHub Release (Linux + Windows)
+  # ===========================================
+  release:
+    needs: [linux-x86_64, linux-arm64, windows-x64]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Collect release files
+        run: |
+          mkdir release_files
+          find artifacts -type f \( -name "*.AppImage" -o -name "*.zip" \) -exec cp {} release_files/ \;
+          ls -la release_files/
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "ngPostEx ${{ github.ref_name }}"
+          body: |
+            ## ngPostEx ${{ github.ref_name }}
+
+            Fork of [ngPost](https://github.com/mbruel/ngPost) by Matthieu Bruel.
+
+            ### Changes
+            See [release_notes.txt](https://github.com/BakasuraRCE/ngPostEx/blob/master/release_notes.txt) for full changelog.
+
+            ### Downloads
+
+            | Platform | GUI | CMD (headless) |
+            |----------|-----|----------------|
+            | **Linux x86_64** | `ngPostEx_*-x86_64.AppImage` | `ngPostEx_*_cmd-x86_64.AppImage` |
+            | **Linux ARM64** | `ngPostEx_*-aarch64.AppImage` | `ngPostEx_*_cmd-aarch64.AppImage` |
+            | **Windows x64** | `ngPostEx_*_win-x64.zip` | `ngPostEx_*_cmd_win-x64.zip` |
+            | **macOS (Intel)** | `ngPostEx_*_macos.dmg` | `ngPostEx_*_cmd_macos.tar.gz` |
+
+            ### Notes
+            - **GUI** versions include the graphical interface but also work from command line.
+            - **CMD** versions are for headless/server environments without a display server.
+            - All builds use **Qt 6** and **OpenSSL 3**.
+            - Default config file: `~/.ngPostEx` (Linux/macOS) or `ngPostEx.conf` (Windows)
+            - macOS builds are added separately when the runner becomes available.
+
+          files: release_files/*
+          draft: false
+          prerelease: false
+
+  # ===========================================
+  # macOS - GUI & CMD (independent, appends to release)
   # ===========================================
   macos:
     runs-on: macos-13
@@ -317,61 +369,9 @@ jobs:
           cp ngPostEx pkg/
           tar -czf ngPostEx_${GITHUB_REF_NAME}_cmd_macos.tar.gz -C pkg .
 
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: macos
-          path: |
-            build-gui/ngPostEx_*_macos.dmg
-            build-cmd/ngPostEx_*_cmd_macos.tar.gz
-
-  # ===========================================
-  # Create GitHub Release
-  # ===========================================
-  release:
-    needs: [linux-x86_64, linux-arm64, windows-x64, macos]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-
-      - name: Collect release files
-        run: |
-          mkdir release_files
-          find artifacts -type f \( -name "*.AppImage" -o -name "*.zip" -o -name "*.dmg" -o -name "*.tar.gz" \) -exec cp {} release_files/ \;
-          ls -la release_files/
-
-      - name: Create Release
+      - name: Upload macOS artifacts to release
         uses: softprops/action-gh-release@v2
         with:
-          name: "ngPostEx ${{ github.ref_name }}"
-          body: |
-            ## ngPostEx ${{ github.ref_name }}
-
-            Fork of [ngPost](https://github.com/mbruel/ngPost) by Matthieu Bruel.
-
-            ### Changes
-            See [release_notes.txt](https://github.com/BakasuraRCE/ngPostEx/blob/master/release_notes.txt) for full changelog.
-
-            ### Downloads
-
-            | Platform | GUI | CMD (headless) |
-            |----------|-----|----------------|
-            | **Linux x86_64** | `ngPostEx_*-x86_64.AppImage` | `ngPostEx_*_cmd-x86_64.AppImage` |
-            | **Linux ARM64** | `ngPostEx_*-aarch64.AppImage` | `ngPostEx_*_cmd-aarch64.AppImage` |
-            | **Windows x64** | `ngPostEx_*_win-x64.zip` | `ngPostEx_*_cmd_win-x64.zip` |
-            | **macOS (Intel)** | `ngPostEx_*_macos.dmg` | `ngPostEx_*_cmd_macos.tar.gz` |
-
-            ### Notes
-            - **GUI** versions include the graphical interface but also work from command line.
-            - **CMD** versions are for headless/server environments without a display server.
-            - All builds use **Qt 6** and **OpenSSL 3**.
-            - Default config file: `~/.ngPostEx` (Linux/macOS) or `ngPostEx.conf` (Windows)
-
-          files: release_files/*
-          draft: false
-          prerelease: false
+          files: |
+            build-gui/ngPostEx_*_macos.dmg
+            build-cmd/ngPostEx_*_cmd_macos.tar.gz
