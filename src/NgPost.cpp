@@ -789,13 +789,17 @@ void NgPost::_post(const QFileInfo &fileInfo, const QString &monitorFolder)
             _meta.remove("password");
     }
 
+    // Disable filename obfuscation for monitoring posts to prevent infinite loop (#193).
+    // Renaming files on disk triggers the monitor to detect them as new files.
+    bool obfuscateFileNameForJob = _folderMonitor ? false : _obfuscateFileName;
+
     qDebug() << "Start posting job for " << _nzbName
              << " with rar_name: " << _rarName << " and pass: " << _rarPass
              << " (auto delete: " << _delAuto << ")";
 
     startPostingJob(new PostingJob(this, nzbFilePath, {fileInfo}, nullptr,
                                    getPostingGroups(), from(),
-                                   _obfuscateArticles, _obfuscateFileName,
+                                   _obfuscateArticles, obfuscateFileNameForJob,
                                    _tmpPath, _rarPath, _rarArgs,
                                    _rarSize, _useRarMax, _par2Pct,
                                    _doCompress, _doPar2, _rarName, _rarPass,

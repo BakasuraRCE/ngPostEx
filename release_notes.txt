@@ -26,6 +26,10 @@ Original: https://github.com/mbruel/ngPost
 
 - Docs: Fixed PAR2_CMD → PAR2_PATH in README documentation (#154).
 
+- Fix: Monitoring + filename obfuscation no longer causes infinite posting loop (#193).
+  Renaming files on disk triggered the folder monitor to detect them as new files.
+  Filename obfuscation is now automatically disabled for monitoring posts.
+
 
 ####################################################
 ###       Release: ngPostEx v5.1                 ###
