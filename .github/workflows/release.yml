@@ -350,7 +350,15 @@ jobs:
       - name: Smoke test CMD
         run: |
           cd build-cmd
-          output=$(./ngPostEx --help 2>&1 || true)
+          # Binary may be plain or inside .app bundle depending on qmake behavior
+          if [ -f ngPostEx ]; then
+            BIN=./ngPostEx
+          elif [ -f ngPostEx.app/Contents/MacOS/ngPostEx ]; then
+            BIN=./ngPostEx.app/Contents/MacOS/ngPostEx
+          else
+            echo "FAIL: CMD binary not found"; ls -la; exit 1
+          fi
+          output=$($BIN --help 2>&1 || true)
           echo "$output" | head -20
           echo "$output" | grep -q "SSL support: yes" || { echo "FAIL: SSL not enabled"; exit 1; }
           echo "OK: macOS CMD smoke test passed"
@@ -373,7 +381,12 @@ jobs:
         run: |
           cd build-cmd
           mkdir -p pkg
-          cp ngPostEx pkg/
+          # Binary may be plain or inside .app bundle
+          if [ -f ngPostEx ]; then
+            cp ngPostEx pkg/
+          else
+            cp ngPostEx.app/Contents/MacOS/ngPostEx pkg/
+          fi
           tar -czf ngPostEx_${GITHUB_REF_NAME}_cmd_macos.tar.gz -C pkg .
 
       - name: Upload artifacts
