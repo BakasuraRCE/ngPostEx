@@ -52,7 +52,7 @@ NntpArticle::NntpArticle(NntpFile *file, uint part, qint64 pos, qint64 bytes,
 
         std::string subject = ss.str();
         _subject = new char[subject.length()+1];
-        std::strcpy(_subject, subject.c_str());
+        std::memcpy(_subject, subject.c_str(), subject.length()+1);
     }
 }
 
@@ -102,7 +102,7 @@ void NntpArticle::yEncBody(const char data[])
 
     std::string body = ss.str();
     _body = new char[body.length()+1];
-    std::strcpy(_body, body.c_str());
+    std::memcpy(_body, body.c_str(), body.length()+1);
 }
 
 NntpArticle::~NntpArticle()

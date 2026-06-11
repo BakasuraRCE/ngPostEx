@@ -406,12 +406,9 @@ void MainWindow::_initServerBox()
     _ui->serversTable->verticalHeader()->hide();
     _ui->serversTable->setColumnCount(sServerListHeaders.size());
 
-    int width = 2, col = 0;
+    int col = 0;
     for (int size : sServerListSizes)
-    {
         _ui->serversTable->setColumnWidth(col++, size);
-        width += size;
-    }
 //    _ui->serversTable->setMaximumWidth(width);
 
     connect(_ui->addServerButton,   &QAbstractButton::clicked, this, &MainWindow::onAddServer);

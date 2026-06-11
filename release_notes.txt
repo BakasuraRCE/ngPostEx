@@ -34,6 +34,20 @@ Original: https://github.com/mbruel/ngPost
   After the size-stable check, now also verifies the file is not locked before
   processing. Waits up to 30 additional intervals for the lock to be released.
 
+- Docker: Upgraded to Ubuntu 24.04 + Qt 6.8 LTS via aqtinstall (multi-stage build).
+  Runtime image is now minimal with only necessary Qt libs and plugins.
+
+- CI: macOS build integrated into unified release job (no longer independent).
+  All platforms now upload artifacts and the release job consolidates them.
+
+- CI: Added smoke tests on all platforms (Linux, Windows, macOS, Docker).
+  Verifies binary launches correctly and SSL support is enabled.
+
+- Fix: Compiler warnings cleanup:
+  - NntpArticle.cpp: Replaced strcpy with memcpy (MSVC C4996 unsafe warning)
+  - Nntp.cpp: Removed unused exception variable (MSVC C4101)
+  - MainWindow.cpp: Removed dead 'width' variable (clang -Wunused-but-set-variable)
+
 
 ####################################################
 ###       Release: ngPostEx v5.1                 ###
