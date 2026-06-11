@@ -289,10 +289,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Download all artifacts
+      - name: Download Linux x86_64 artifacts
         uses: actions/download-artifact@v4
         with:
-          path: artifacts
+          name: linux-x86_64
+          path: artifacts/linux-x86_64
+
+      - name: Download Linux ARM64 artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-arm64
+          path: artifacts/linux-arm64
+
+      - name: Download Windows artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-x64
+          path: artifacts/windows-x64
 
       - name: Collect release files
         run: |
