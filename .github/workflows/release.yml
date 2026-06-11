@@ -390,8 +390,16 @@ jobs:
         with:
           version: '6.8.*'
 
+      - name: Install dependencies
+        run: |
+          brew install par2
+
       - name: Build GUI
         run: |
+          # Provide par2 binary and parpar placeholder for app bundle
+          cp $(which par2) src/par2
+          touch src/parpar
+          cp LICENSE src/LICENSE
           mkdir build-gui && cd build-gui
           qmake ../src/ngPost.pro CONFIG+=release
           make -j$(sysctl -n hw.ncpu)
