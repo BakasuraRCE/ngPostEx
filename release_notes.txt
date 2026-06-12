@@ -13,6 +13,32 @@ Original: https://github.com/mbruel/ngPost
 
 
 ####################################################
+###       Release: ngPostEx v5.3                 ###
+###       date:    2026/06/11                    ###
+####################################################
+
+- Feature: PAR2 recovery analysis for --check.
+  After verifying article availability, ngPostEx now reports whether the NZB
+  is RECOVERABLE, UNRECOVERABLE, or COMPLETE based on PAR2 redundancy.
+  Tracks each PAR2 volume individually (all-or-nothing per volume).
+  Reports effective recovery blocks from intact volumes only.
+
+- Feature: New --par2_block_size option for --check.
+  Allows specifying the PAR2 block size used when the NZB was created.
+  Defaults to article_size (~700KB). Users of ParPar with large block sizes
+  (e.g. -s5M) should set this for more accurate recovery estimates.
+  Also configurable via PAR2_BLOCK_SIZE in the config file.
+
+- Fix: NZB segment bytes attribute now reports the actual post-yEnc article size.
+  Previously reported the raw data size (pre-encoding), which was slightly smaller
+  than the real article size on the server. Now matches nyuu/other posters behavior.
+  This gives download clients more accurate size estimates and progress bars.
+
+- Internal: NzbCheck refactored with per-volume PAR2 tracking (Par2Volume struct),
+  metadata availability detection, and configurable block/article size ratio.
+
+
+####################################################
 ###       Release: ngPostEx v5.2                 ###
 ###       date:    2026/06/10                    ###
 ####################################################

@@ -25,6 +25,8 @@
 #include <QString>
 #include <QTextStream>
 #include <QSet>
+#include <QMap>
+#include <QVector>
 #include <QTimer>
 #include <QCommandLineOption>
 #include <QElapsedTimer>
@@ -36,6 +38,23 @@ class NntpCheckCon;
 #else
     #define MB_FLUSH Qt::flush
 #endif
+
+/*!
+ * \brief Represents a single PAR2 file (base or volume) in the NZB
+ */
+struct Par2Volume {
+    QString subject;             //!< subject line identifying this par2 file
+    int     blocks;              //!< number of recovery blocks (0 for .par2 base)
+    bool    isVolume;            //!< true if it's a .vol*.par2, false if it's the base .par2
+    QSet<QString> articleIds;    //!< all article message-ids belonging to this file
+    int     nbExpectedArticles;  //!< total articles expected for this file
+    int     nbMissingArticles;   //!< articles missing from server (updated during check)
+
+    Par2Volume() : blocks(0), isVolume(false), nbExpectedArticles(0), nbMissingArticles(0) {}
+
+    //! A volume is intact if none of its articles are missing
+    bool isIntact() const { return nbMissingArticles == 0; }
+};
 
 class NzbCheck : public QObject
 {
@@ -71,6 +90,16 @@ private:
     int               _nbCons;
     ushort            _nbMaxRetry;    //!< max retries per connection (same as retry config)
     int               _socketTimeOut; //!< socket timeout in ms
+
+    // PAR2 recovery analysis (per-volume tracking)
+    int               _nbPar2Articles;         //!< total articles belonging to par2 files
+    int               _nbDataArticles;         //!< total articles belonging to data files
+    int               _nbMissingPar2Articles;  //!< missing articles from par2 files (total)
+    int               _nbMissingDataArticles;  //!< missing articles from data files
+    QVector<Par2Volume> _par2Volumes;          //!< individual par2 volumes for precise tracking
+    QMap<QString, int>  _articleToVolume;      //!< maps article-id to index in _par2Volumes
+    qint64            _par2BlockSize;          //!< PAR2 block size in bytes (default: article size ~700KB)
+    qint64            _articleSize;            //!< article size in bytes (for block/article ratio calculation)
 
     static const int sDefaultRefreshRate  = 200; //!< how often shall we refresh the progressbar bar?
     static const int sprogressbarBarWidth = 50;
@@ -111,6 +140,16 @@ public:
     inline bool debugMode() const;
     inline void setDebug(ushort level);
 
+    // PAR2 recovery analysis
+    inline bool isPar2Article(const QString &articleId) const;
+    inline void setPar2BlockSize(qint64 blockSize);
+    inline void setArticleSize(qint64 artSize);
+    int estimateDamagedBlocks() const;
+    int effectiveRecoveryBlocks() const;
+    bool hasIntactPar2Metadata() const;
+    bool isRecoverable() const;
+    void printRecoveryAnalysis();
+
 
     inline void log(const QString     &aMsg);
     inline void log(const char        *aMsg);
@@ -146,6 +185,13 @@ void NzbCheck::missingArticle(const QString &article)
         _cout << (_dispProgressBar ? "\n" : "")
               << tr("+ Missing Article on server: ") << article << "\n" << MB_FLUSH;
     ++_nbMissingArticles;
+    if (_articleToVolume.contains(article))
+    {
+        ++_nbMissingPar2Articles;
+        _par2Volumes[_articleToVolume[article]].nbMissingArticles++;
+    }
+    else
+        ++_nbMissingDataArticles;
 }
 
 QString NzbCheck::getNextArticle()
@@ -170,5 +216,10 @@ void NzbCheck::log(const std::string &aMsg) { _cout << aMsg.c_str() << "\n" << M
 void NzbCheck::error(const QString     &aMsg) { _cerr << aMsg << "\n" << MB_FLUSH; }
 void NzbCheck::error(const char        *aMsg) { _cerr << aMsg << "\n" << MB_FLUSH; }
 void NzbCheck::error(const std::string &aMsg) { _cerr << aMsg.c_str() << "\n" << MB_FLUSH; }
+
+bool NzbCheck::isPar2Article(const QString &articleId) const { return _articleToVolume.contains(articleId); }
+
+void NzbCheck::setPar2BlockSize(qint64 blockSize) { _par2BlockSize = blockSize; }
+void NzbCheck::setArticleSize(qint64 artSize) { _articleSize = artSize; }
 
 #endif // NZBCHECK_H

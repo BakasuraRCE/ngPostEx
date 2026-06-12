@@ -1,6 +1,6 @@
 QT += core network
 
-DEFINES += "APP_VERSION=\"5.2\""
+DEFINES += "APP_VERSION=\"5.3\""
 
 INCLUDEPATH += $$PWD
 TARGET = ngPostEx

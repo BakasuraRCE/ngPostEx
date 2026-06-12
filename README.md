@@ -1,6 +1,6 @@
 <img align="left" width="80" height="80" src="https://raw.githubusercontent.com/BakasuraRCE/ngPostEx/master/src/resources/icons/ngPost.png" alt="ngPostEx">
 
-# ngPostEx v5.2
+# ngPostEx v5.3
 
 **A fork of [ngPost](https://github.com/mbruel/ngPost) by Matthieu Bruel**
 
@@ -99,6 +99,7 @@ Syntax: ngPostEx (options)* (-i <file or folder> | --auto <folder> | --monitor <
   --rar_max          : maximum number of archive volumes
   --par2_pct         : par2 redundancy percentage (0 = no par2)
   --par2_path        : par2 absolute file path
+  --par2_block_size  : PAR2 block size in bytes for --check recovery analysis (default: article_size)
   --auto_compress    : compress with random name/password + generate par2
   --compress         : compress inputs using RAR or 7z
   --gen_par2         : generate par2 (with --compress)
@@ -140,6 +141,53 @@ ngPostEx --conf ~/.ngPostEx --check /path/to/file.nzb
 ```
 
 Make sure at least one server in your config has `nzbCheck = true`.
+
+#### Recovery analysis
+
+When the check completes, ngPostEx analyzes the NZB's PAR2 structure and reports whether the content is recoverable despite missing articles. The output looks like:
+
+```
+=== Recovery Analysis ===
+  Data articles: 950 (missing: 12)
+  PAR2 articles: 85 (missing: 3)
+  PAR2 volumes: 4 intact, 1 damaged (of 5 total)
+  PAR2 blocks: 63 total, 47 effective (from intact volumes only)
+  Estimated damaged blocks: 12 (block size: 716800, article size: 716800)
+  Status: RECOVERABLE - 12 damaged block(s), effective recovery blocks: 47
+```
+
+The possible statuses are:
+- **COMPLETE** — no missing articles, nothing to repair
+- **RECOVERABLE** — missing data can be repaired with available PAR2 blocks
+- **UNRECOVERABLE** — not enough PAR2 blocks to repair the missing data
+
+#### How the analysis works
+
+1. Each PAR2 volume file (`.vol*.par2`) is tracked individually. If a volume loses even one article, its entire set of recovery blocks is considered lost (the file is unreadable without all its segments).
+2. Effective recovery blocks = sum of blocks from volumes that have 100% of their articles present.
+3. PAR2 metadata is stored in every PAR2 file. As long as at least one PAR2 file (base or volume) is fully intact, repair metadata is available.
+4. Damaged data blocks are estimated from the number of missing data articles, adjusted by the ratio between PAR2 block size and article size.
+
+#### The `--par2_block_size` option
+
+By default, the analysis assumes 1 missing article ≈ 1 damaged PAR2 block (block size = article size). This is accurate for par2cmdline and MultiPar which typically use block sizes close to the article size (~768KB).
+
+If the NZB was created with ParPar using large block sizes (e.g. `-s5M`), multiple lost articles may fall within the same PAR2 block, meaning fewer recovery blocks are needed. In this case:
+
+```bash
+ngPostEx --check file.nzb --par2_block_size 5242880
+```
+
+Or in the config file:
+```
+PAR2_BLOCK_SIZE = 5242880
+```
+
+#### Precision and limitations
+
+- The analysis is **conservative** (pessimistic): it may report UNRECOVERABLE when repair is actually possible, but will never report RECOVERABLE when it isn't.
+- Without knowing the exact PAR2 block size (which is stored inside the `.par2` file), the default assumes worst-case (each missing article damages a different block).
+- The volume block count is extracted from the filename pattern `.volXX+NN.par2` where NN is the number of recovery blocks. Non-standard PAR2 naming will result in 0 detected blocks.
 
 ### NZB Obfuscation Audit:
 

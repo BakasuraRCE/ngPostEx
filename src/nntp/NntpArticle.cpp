@@ -37,6 +37,7 @@ NntpArticle::NntpArticle(NntpFile *file, uint part, qint64 pos, qint64 bytes,
     _subject(nullptr),
     _body(nullptr),
     _filePos(pos), _fileBytes(bytes),
+    _bodySize(0),
     _obfuscateArticles(obfuscateArticles),
     _nbTrySending(0),
     _msgId()
@@ -103,6 +104,7 @@ void NntpArticle::yEncBody(const char data[])
     std::string body = ss.str();
     _body = new char[body.length()+1];
     std::memcpy(_body, body.c_str(), body.length()+1);
+    _bodySize = static_cast<qint64>(body.length());
 }
 
 NntpArticle::~NntpArticle()

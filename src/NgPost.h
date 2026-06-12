@@ -90,6 +90,7 @@ public:
                     TMP_RAM, TMP_RAM_RATIO,
             #endif
                     PAR2_PCT, PAR2_PATH, PAR2_ARGS,
+                    PAR2_BLOCK_SIZE,
                     PACK, COMPRESS, GEN_PAR2, GEN_NAME, GEN_PASS, LENGTH_NAME, LENGTH_PASS,
                     RAR_NAME, RAR_PASS, RAR_NO_ROOT_FOLDER,
                     AUTO_CLOSE_TABS, AUTO_COMPRESS, GROUP_POLICY, LOG_IN_FILE,
@@ -169,6 +170,7 @@ private:
     QString     _par2Path;
     QString     _par2Args;
     QString     _par2PathConfig;
+    qint64      _par2BlockSize;    //!< PAR2 block size in bytes for recovery analysis (default: 0 = use article_size)
 
     bool        _doCompress;
     bool        _doPar2;

@@ -138,6 +138,7 @@ const QMap<NgPost::Opt, QString> NgPost::sOptionNames =
     {Opt::PAR2_PCT,     "par2_pct"},
     {Opt::PAR2_PATH,    "par2_path"},
     {Opt::PAR2_ARGS,    "par2_args"},
+    {Opt::PAR2_BLOCK_SIZE, "par2_block_size"},
 
     {Opt::AUTO_COMPRESS,"auto_compress"},
     {Opt::PACK,         "pack"},
@@ -171,6 +172,7 @@ const QList<QCommandLineOption> NgPost::sCmdOptions = {
     {{"l", sOptionNames[Opt::LANG]},          tr( "application language"), sOptionNames[Opt::LANG]},
 
     { sOptionNames[Opt::CHECK],               tr( "check nzb file (if articles are available on Usenet) cf https://github.com/mbruel/nzbCheck"), sOptionNames[Opt::CHECK]},
+    { sOptionNames[Opt::PAR2_BLOCK_SIZE],     tr( "PAR2 block size in bytes for recovery analysis during --check (default: article_size)"), sOptionNames[Opt::PAR2_BLOCK_SIZE]},
     { {"q", sOptionNames[Opt::QUIET]},        tr( "quiet mode (no output on stdout)")},
 
 // automated posting (scanning and/or monitoring)
@@ -270,7 +272,7 @@ NgPost::NgPost(int &argc, char *argv[]):
     _storage(nullptr), _ramPath(), _ramRatio(sRamRatioMin),
   #endif
     _tmpPath(), _rarPath(), _rarArgs(), _rarSize(0), _rarMax(sDefaultRarMax), _useRarMax(false),
-    _par2Pct(0), _par2Path(), _par2Args(), _par2PathConfig(),
+    _par2Pct(0), _par2Path(), _par2Args(), _par2PathConfig(), _par2BlockSize(0),
     _doCompress(false), _doPar2(false), _genName(), _genPass(),
     _lengthName(sDefaultLengthName), _lengthPass(sDefaultLengthPass),
     _rarName(), _rarPass(), _rarPassFixed(),
@@ -1344,6 +1346,19 @@ bool NgPost::parseCommandLine(int argc, char *argv[])
         _nzbCheck->setQuiet(_quiet);
         _nzbCheck->setNbMaxRetry(NntpArticle::nbMaxTrySending());
         _nzbCheck->setSocketTimeOut(_socketTimeOut);
+        _nzbCheck->setArticleSize(sArticleSize);
+
+        // PAR2 block size: command line > config file > default (= article size)
+        if (parser.isSet(sOptionNames[Opt::PAR2_BLOCK_SIZE]))
+        {
+            bool ok;
+            qint64 blockSize = parser.value(sOptionNames[Opt::PAR2_BLOCK_SIZE]).toLongLong(&ok);
+            if (ok && blockSize > 0)
+                _nzbCheck->setPar2BlockSize(blockSize);
+        }
+        else if (_par2BlockSize > 0)
+            _nzbCheck->setPar2BlockSize(_par2BlockSize);
+
         int nbArticles = _nzbCheck->parseNzb(parser.value(sOptionNames[Opt::CHECK]));
         if (nbArticles > 0 )
         {
@@ -2281,6 +2296,12 @@ QString NgPost::_parseConfig(const QString &configPath)
                     }
                     else if (opt == sOptionNames[Opt::PAR2_ARGS])
                         _par2Args = val;
+                    else if (opt == sOptionNames[Opt::PAR2_BLOCK_SIZE])
+                    {
+                        qint64 nb = val.toLongLong(&ok);
+                        if (ok && nb > 0)
+                            _par2BlockSize = nb;
+                    }
                     else if (opt == sOptionNames[Opt::LENGTH_NAME])
                     {
                         uint nb = val.toUInt(&ok);

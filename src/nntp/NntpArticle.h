@@ -54,6 +54,7 @@ private:
 
     const qint64 _filePos;   //!< position in the File (for yEnc header)
     const qint64 _fileBytes; //!< bytes of the original file that are encoded
+    qint64 _bodySize;        //!< size of the full article body after yEnc encoding (for NZB bytes attribute)
     const bool _obfuscateArticles; //!< whether to obfuscate yEnc filename
 
     ushort _nbTrySending;
@@ -96,6 +97,7 @@ public:
     inline bool isFirstArticle() const;
 
     inline quint64 size() const;
+    inline qint64 bodySize() const;
 
     inline void genNewId();
 
@@ -133,6 +135,7 @@ NntpFile *NntpArticle::nntpFile() const { return _nntpFile; }
 bool NntpArticle::isFirstArticle() const { return _part == 1; }
 
 quint64 NntpArticle::size() const { return static_cast<quint64>(_fileBytes); }
+qint64 NntpArticle::bodySize() const { return _bodySize; }
 void NntpArticle::genNewId() { _id = QUuid::createUuid(); }
 
 void NntpArticle::overwriteMsgId(const QString &serverMsgID){ _msgId = serverMsgID; }
