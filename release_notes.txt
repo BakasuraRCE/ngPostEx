@@ -14,8 +14,11 @@ Original: https://github.com/mbruel/ngPost
 
 ####################################################
 ###       Release: ngPostEx v5.3                 ###
-###       date:    2026/06/11                    ###
+###       date:    2026/06/14                    ###
 ####################################################
+
+- Fix: Version check and "new version available" URLs now point to the
+  BakasuraRCE/ngPostEx fork instead of the original mbruel/ngPost repository.
 
 - Feature: PAR2 recovery analysis for --check.
   After verifying article availability, ngPostEx now reports whether the NZB

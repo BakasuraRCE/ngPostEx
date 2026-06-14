@@ -835,15 +835,15 @@ void NgPost::onCheckForNewVersion()
                 {
                     QString msg = tr("<center><h3>New version available on GitHUB</h3></center>");
                     msg += tr("<br/>The last release is now <b>v%1</b>").arg(lastRealease);
-                    msg += tr("<br/><br/>You can download it from the <a href='https://github.com/mbruel/ngPost/releases/tag/v%1'>release directory</a>").arg(lastRealease);
-                    msg += tr("<br/><br/>Here are the full <a href='https://github.com/mbruel/ngPost/blob/master/release_notes.txt'>release_notes</a>");
+                    msg += tr("<br/><br/>You can download it from the <a href='https://github.com/BakasuraRCE/ngPostEx/releases/tag/v%1'>release directory</a>").arg(lastRealease);
+                    msg += tr("<br/><br/>Here are the full <a href='https://github.com/BakasuraRCE/ngPostEx/blob/master/release_notes.txt'>release_notes</a>");
 
                     QMessageBox::information(_hmi, tr("New version available"), msg);
                 }
                 else
 #endif
                     qCritical() << "There is a new version available on GitHUB: v" << lastRealease
-                                << " (visit https://github.com/mbruel/ngPost/ to get it)";
+                                << " (visit https://github.com/BakasuraRCE/ngPostEx/ to get it)";
             }
 
             break; // no need to continue to parse the page
@@ -2246,7 +2246,7 @@ QString NgPost::_parseConfig(const QString &configPath)
                             _log(tr("obsolete keyword AUTO_COMPRESS, you should use PACK instead, please click SAVE to update your conf and then go check it."));
                         else
                             _log(tr("obsolete keyword AUTO_COMPRESS, you should use PACK instead, please refer to the conf example: %1").arg(
-                                     "https://github.com/mbruel/ngPost/blob/master/ngPost.conf#L140"));
+                                     "https://github.com/BakasuraRCE/ngPostEx/blob/master/ngPost.conf#L140"));
                     }
                     else if (opt == sOptionNames[Opt::PACK])
                     {

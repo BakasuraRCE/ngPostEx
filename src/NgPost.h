@@ -714,8 +714,8 @@ QString NgPost::desc(bool useHTML)
             tr("invisible mode: full article obfuscation, unique feature making all Articles completely unrecognizable without the nzb")).arg(
             "...").arg(
             tr("for more details, cf %1").arg(
-                    useHTML ? "<a href=\"https://github.com/mbruel/ngPost/\">https://github.com/mbruel/ngPost</a>"
-                            : "https://github.com/mbruel/ngPost")).arg(
+                    useHTML ? "<a href=\"https://github.com/BakasuraRCE/ngPostEx/\">https://github.com/BakasuraRCE/ngPostEx</a>"
+                            : "https://github.com/BakasuraRCE/ngPostEx")).arg(
                 tr("If you'd like to translate ngPost in your language, it's easy, please contact me at Matthieu.Bruel@gmail.com"));
 }
 
