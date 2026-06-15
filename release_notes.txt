@@ -13,6 +13,29 @@ Original: https://github.com/mbruel/ngPost
 
 
 ####################################################
+###       Release: ngPostEx v5.4                 ###
+###       date:    2026/06/15                    ###
+####################################################
+
+- Feature: Lazy evaluation with early termination for --check.
+  NZB check now uses a two-phase strategy:
+    Phase 1: Verify PAR2 articles first to determine available recovery blocks.
+    Phase 2: Verify data articles incrementally with continuous recoverability
+    evaluation. Stops immediately when irrecoverable state is detected.
+  Special case: if NZB has no PAR2, any single missing data article triggers
+  immediate termination.
+  Result: heavily damaged NZBs that previously took minutes now terminate in
+  seconds (e.g., 54K-article NZB: 156 sec → 9 sec).
+
+- Improvement: Context-aware recommendation messages in recovery analysis.
+  Messages now differentiate between:
+    - "data intact but PAR2 degraded" (future risk, re-post PAR2)
+    - "data damaged but recoverable" (needs repair now)
+  Previously, the ≥90 threshold always said "data intact" even when data was
+  damaged but recoverable via PAR2.
+
+
+####################################################
 ###       Release: ngPostEx v5.3                 ###
 ###       date:    2026/06/14                    ###
 ####################################################

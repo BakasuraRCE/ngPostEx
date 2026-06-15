@@ -55,7 +55,25 @@ void NzbCheck::onDisconnected(NntpCheckCon *con)
             _cout << "\n" << MB_FLUSH;
         }
 
-        if (_nbCheckedArticles == 0 && _nbTotalArticles > 0)
+        if (_earlyStopTriggered)
+        {
+            // Early termination: we determined irrecoverability without checking all articles
+            if (!_quietMode)
+            {
+                qint64 duration = _timeStart.elapsed();
+                _cout << tr("Early stop: UNRECOVERABLE state detected after checking %1/%2 articles "
+                            "(in %3, %4 sec, using %5 connections on %6 server(s))").arg(
+                             _nbCheckedArticles).arg(
+                             _nbTotalArticles).arg(
+                             QTime::fromMSecsSinceStartOfDay(static_cast<int>(duration)).toString("hh:mm:ss.zzz")).arg(
+                             std::round(1.*duration/1000)).arg(
+                             _nbCons).arg(
+                             nbCheckingServers()) << "\n" << MB_FLUSH;
+
+                printRecoveryAnalysis();
+            }
+        }
+        else if (_nbCheckedArticles == 0 && _nbTotalArticles > 0)
         {
             _cerr << tr("ERROR: check FAILED - no articles could be verified (0/%1). "
                         "All connections were refused or dropped. "
@@ -102,14 +120,16 @@ void NzbCheck::onRefreshprogressbarBar()
     _cout << "] " << int(progressbar * 100) << " %"
               << " (" << _nbCheckedArticles << " / " << _nbTotalArticles << ")"
               << tr(" missing: ") << _nbMissingArticles;
+    if (_earlyStopTriggered)
+        _cout << tr(" [STOPPING - UNRECOVERABLE]");
     _cout.flush();
 
-    if (_nbCheckedArticles < _nbTotalArticles)
+    if (_nbCheckedArticles < _nbTotalArticles && !_earlyStopTriggered)
         _progressbarTimer.start(_refreshRate);
 }
 
 NzbCheck::NzbCheck():QObject(),
-    _nzbPath(), _articles(),
+    _nzbPath(), _par2ArticleQueue(), _dataArticleQueue(), _articles(),
     _cout(stdout), _cerr(stderr),
     _nbTotalArticles(0),  _nbMissingArticles(0), _nbCheckedArticles(0),
     _nntpServers(),
@@ -120,7 +140,8 @@ NzbCheck::NzbCheck():QObject(),
     _nbPar2Articles(0), _nbDataArticles(0),
     _nbMissingPar2Articles(0), _nbMissingDataArticles(0),
     _par2Volumes(), _articleToVolume(),
-    _par2BlockSize(716800), _articleSize(716800)
+    _par2BlockSize(716800), _articleSize(716800),
+    _par2PhaseComplete(false), _earlyStopTriggered(false), _nbPar2Checked(0)
 {}
 
 NzbCheck::~NzbCheck()
@@ -211,15 +232,16 @@ int NzbCheck::parseNzb()
                         ++nbArticles;
                         xmlReader.readNext();
                         QString articleId = QString("<%1>").arg(xmlReader.text().toString());
-                        _articles.push(articleId);
                         if (isPar2)
                         {
+                            _par2ArticleQueue.push(articleId);
                             _articleToVolume.insert(articleId, volIndex);
                             _par2Volumes[volIndex].articleIds.insert(articleId);
                             ++_nbPar2Articles;
                         }
                         else
                         {
+                            _dataArticleQueue.push(articleId);
                             ++_nbDataArticles;
                         }
                     }
@@ -232,7 +254,10 @@ int NzbCheck::parseNzb()
                       << " at line: " << xmlReader.lineNumber() << "\n" << MB_FLUSH;
             return -2;
         }
-        _nbTotalArticles = _articles.size();
+        _nbTotalArticles = _par2ArticleQueue.size() + _dataArticleQueue.size();
+        // If no PAR2 at all, mark PAR2 phase as complete immediately
+        if (_par2ArticleQueue.isEmpty())
+            _par2PhaseComplete = true;
         if (!_quietMode)
         {
             int totalBlocks = 0;
@@ -486,6 +511,9 @@ int NzbCheck::computeHealthScore() const
 void NzbCheck::printRecoveryAnalysis()
 {
     _cout << "\n" << tr("=== Recovery Analysis ===") << "\n";
+    if (_earlyStopTriggered && _nbCheckedArticles < _nbTotalArticles)
+        _cout << tr("  (early termination: %1/%2 articles checked)").arg(
+                     _nbCheckedArticles).arg(_nbTotalArticles) << "\n";
     _cout << tr("  Data articles: %1 (missing: %2)").arg(_nbDataArticles).arg(_nbMissingDataArticles) << "\n";
     _cout << tr("  PAR2 articles: %1 (missing: %2)").arg(_nbPar2Articles).arg(_nbMissingPar2Articles) << "\n";
 
@@ -606,22 +634,40 @@ void NzbCheck::printRecoveryAnalysis()
     }
     _cout << "\n";
 
-    // Recommendation thresholds aligned with computeHealthScore() caps:
-    //   >= 90: healthy (all good)
-    //   >= 70: degraded (PAR2 loss but still viable)
-    //   >= 50: at risk (severe PAR2 loss)
-    //   >= 30: critical (barely viable)
-    //   <  30: dead (unrecoverable cap = 25 max)
+    // Recommendation: context-aware messages based on actual state
+    // Two axes: data state (intact vs damaged) and PAR2 state (full, degraded, dead)
     if (health >= 90)
-        _cout << tr("  >> Healthy - data intact, PAR2 redundancy sufficient") << "\n";
+    {
+        if (_nbMissingDataArticles == 0)
+            _cout << tr("  >> Healthy - data intact, PAR2 redundancy sufficient") << "\n";
+        else
+            _cout << tr("  >> Healthy - data repairable, PAR2 redundancy sufficient for recovery") << "\n";
+    }
     else if (health >= 70)
-        _cout << tr("  >> Degraded - PAR2 redundancy reduced, re-post PAR2 volumes to restore protection") << "\n";
+    {
+        if (_nbMissingDataArticles == 0)
+            _cout << tr("  >> Degraded - data intact but PAR2 redundancy reduced, re-post PAR2 volumes to restore protection") << "\n";
+        else
+            _cout << tr("  >> Degraded - data repairable but PAR2 redundancy reduced, repair soon before further degradation") << "\n";
+    }
     else if (health >= 50)
-        _cout << tr("  >> At risk - significant PAR2 loss, repair possible but redundancy critically low") << "\n";
+    {
+        if (_nbMissingDataArticles == 0)
+            _cout << tr("  >> At risk - data intact but PAR2 critically low, any future data loss may be unrecoverable") << "\n";
+        else
+            _cout << tr("  >> At risk - data repairable but PAR2 critically low, repair immediately") << "\n";
+    }
     else if (health >= 30)
-        _cout << tr("  >> Critical - repair barely viable, consider re-posting from source") << "\n";
+    {
+        if (_nbMissingDataArticles == 0)
+            _cout << tr("  >> Critical - data intact but PAR2 nearly gone, re-post PAR2 volumes urgently") << "\n";
+        else
+            _cout << tr("  >> Critical - repair barely viable, consider re-posting from source") << "\n";
+    }
     else
+    {
         _cout << tr("  >> Dead - unrecoverable, must be re-posted from source") << "\n";
+    }
 
     _cout << MB_FLUSH;
 }

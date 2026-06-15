@@ -64,7 +64,9 @@ private:
     static constexpr const char *sNntpArticleYencSubjectStrRegExp = "yEnc\\s+\\(\\d+/(\\d+)\\)";
 
     QString           _nzbPath;
-    QStack<QString>   _articles;
+    QStack<QString>   _par2ArticleQueue;   //!< PAR2 articles (checked first)
+    QStack<QString>   _dataArticleQueue;   //!< Data articles (checked after PAR2 phase)
+    QStack<QString>   _articles;           //!< unified view (deprecated, kept for count)
 
     QTextStream       _cout; //!< stream for stdout
     QTextStream       _cerr; //!< stream for stderr
@@ -100,6 +102,9 @@ private:
     QMap<QString, int>  _articleToVolume;      //!< maps article-id to index in _par2Volumes
     qint64            _par2BlockSize;          //!< PAR2 block size in bytes (default: article size ~700KB)
     qint64            _articleSize;            //!< article size in bytes (for block/article ratio calculation)
+    bool              _par2PhaseComplete;     //!< true once all PAR2 articles have been checked
+    bool              _earlyStopTriggered;   //!< true when irrecoverable state detected → stop checking
+    int               _nbPar2Checked;        //!< number of PAR2 articles fully checked so far
 
     static const int sDefaultRefreshRate  = 200; //!< how often shall we refresh the progressbar bar?
     static const int sprogressbarBarWidth = 50;
@@ -135,6 +140,7 @@ public:
     inline void missingArticle(const QString &article);
     inline QString getNextArticle();
     inline void articleChecked();
+    inline bool shouldStopEarly() const;
 
     inline int nbMissingArticles() const;
     inline bool debugMode() const;
@@ -193,17 +199,56 @@ void NzbCheck::missingArticle(const QString &article)
     }
     else
         ++_nbMissingDataArticles;
+
+    // Early-stop evaluation (only after PAR2 phase is complete)
+    if (!_earlyStopTriggered && _par2PhaseComplete)
+    {
+        if (_nbMissingDataArticles > 0 && !isRecoverable())
+            _earlyStopTriggered = true;
+    }
+    // If no PAR2 at all, any missing data article is immediately irrecoverable
+    if (!_earlyStopTriggered && _par2Volumes.isEmpty() && _nbMissingDataArticles > 0)
+        _earlyStopTriggered = true;
 }
 
 QString NzbCheck::getNextArticle()
 {
-    if (_articles.isEmpty())
+    // Early-stop: signal connections to close
+    if (_earlyStopTriggered)
         return QString();
-    else
-        return _articles.pop();
+
+    // Phase 1: PAR2 articles first
+    if (!_par2ArticleQueue.isEmpty())
+        return _par2ArticleQueue.pop();
+
+    // Transition: PAR2 phase just completed
+    if (!_par2PhaseComplete)
+    {
+        _par2PhaseComplete = true;
+        // Immediate check: if no PAR2 exists and data is already missing, stop
+        if (_par2Volumes.isEmpty() && _nbMissingDataArticles > 0)
+        {
+            _earlyStopTriggered = true;
+            return QString();
+        }
+        // Check if already irrecoverable based on PAR2 results
+        if (_nbMissingDataArticles > 0 && !isRecoverable())
+        {
+            _earlyStopTriggered = true;
+            return QString();
+        }
+    }
+
+    // Phase 2: Data articles
+    if (!_dataArticleQueue.isEmpty())
+        return _dataArticleQueue.pop();
+
+    return QString();
 }
 
 void NzbCheck::articleChecked() { ++_nbCheckedArticles; }
+
+bool NzbCheck::shouldStopEarly() const { return _earlyStopTriggered; }
 
 int NzbCheck::nbMissingArticles() const { return _nbMissingArticles; }
 

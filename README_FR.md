@@ -1,6 +1,6 @@
 <img align="left" width="80" height="80" src="https://raw.githubusercontent.com/BakasuraRCE/ngPostEx/master/src/resources/icons/ngPost.png" alt="ngPostEx">
 
-# ngPostEx v5.3
+# ngPostEx v5.4
 
 **Un fork de [ngPost](https://github.com/mbruel/ngPost) par Matthieu Bruel**
 
@@ -12,6 +12,8 @@ Ce fork a pour but de corriger des bugs, améliorer la fiabilité, et ajouter de
 - Correction du `--check` faux positif quand les connexions sont refusées
 - Correction de l'obfuscation yEnc ([#177](https://github.com/mbruel/ngPost/issues/177))
 - Logique de reconnexion pour `--check` (utilise le même `retry` du config)
+- Évaluation paresseuse avec arrêt anticipé pour `--check` (arrêt immédiat si irrécupérable)
+- Analyse de récupération PAR2 avec score de santé pour `--check`
 - Suppression de `QRegExp` obsolète (compatibilité Qt6 Windows)
 - Fichier config par défaut : `~/.ngPostEx` / `ngPostEx.conf`
 
@@ -136,7 +138,7 @@ Exemple de sortie :
   Status: RECOVERABLE - 12 damaged block(s), effective recovery blocks: 47
 
   Health: 82/100
-  >> Degraded - PAR2 redundancy reduced, re-post PAR2 volumes to restore protection
+  >> Degraded - data intact but PAR2 redundancy reduced, re-post PAR2 volumes to restore protection
 ```
 
 Les statuts possibles sont :
@@ -163,11 +165,13 @@ Le score reflète la viabilité à long terme du NZB sur Usenet. Il privilégie 
 
 | Score | Niveau | Signification |
 |-------|--------|---------------|
-| ≥ 90 | Healthy | Données intactes, redondance PAR2 suffisante |
-| ≥ 70 | Degraded | Redondance PAR2 réduite, re-poster les volumes PAR2 pour restaurer la protection |
-| ≥ 50 | At risk | Perte significative de PAR2, réparation possible mais redondance critique |
-| ≥ 30 | Critical | Réparation à peine viable, envisager un re-post depuis la source |
+| ≥ 90 | Healthy | Données intactes/réparables, redondance PAR2 suffisante |
+| ≥ 70 | Degraded | Redondance PAR2 réduite ; réparer bientôt ou re-poster les volumes PAR2 |
+| ≥ 50 | At risk | PAR2 critique ; toute perte future de données pourrait être irrécupérable |
+| ≥ 30 | Critical | Réparation à peine viable ou PAR2 presque disparu |
 | < 30 | Dead | Irrécupérable, doit être re-posté depuis la source |
+
+Les messages sont contextuels : ils différencient « données intactes mais PAR2 dégradé » (risque futur) de « données endommagées mais récupérables » (réparation nécessaire maintenant).
 
 **Cas spéciaux :**
 
@@ -185,6 +189,17 @@ Le score reflète la viabilité à long terme du NZB sur Usenet. Il privilégie 
 2. Blocs effectifs = somme des blocs des volumes dont 100% des articles sont présents.
 3. Les métadonnées PAR2 sont répliquées dans chaque fichier PAR2. Tant qu'au moins un fichier PAR2 (base ou volume) est intact, les métadonnées de réparation sont disponibles.
 4. Les blocs de données endommagés sont estimés à partir du nombre d'articles manquants, ajustés par le ratio entre la taille du bloc PAR2 et la taille de l'article.
+
+#### Évaluation paresseuse avec arrêt anticipé
+
+La vérification utilise une stratégie en deux phases pour minimiser le temps passé sur les NZB volumineux et irrécupérables :
+
+1. **Phase 1 : Articles PAR2 en premier** — Vérifie tous les articles PAR2 pour déterminer les blocs de récupération disponibles.
+2. **Phase 2 : Articles de données avec évaluation continue** — Vérifie les articles de données de manière incrémentale. Après chaque article manquant détecté, recalcule la récupérabilité. Si le NZB devient irrécupérable, toutes les connexions s'arrêtent immédiatement.
+
+**Cas spécial :** Si le NZB ne contient aucun fichier PAR2, un seul article de données manquant déclenche l'arrêt immédiat (aucune récupération n'est possible sans PAR2).
+
+Cela peut réduire le temps de vérification de minutes à secondes pour les NZB très endommagés (ex : un NZB de 54K articles qui prenait 156 secondes se termine maintenant en ~9 secondes quand il est irrécupérable).
 
 #### L'option `--par2_block_size`
 
