@@ -33,8 +33,9 @@
 const QRegularExpression NzbCheck::sNntpArticleYencSubjectRegExp = QRegularExpression(sNntpArticleYencSubjectStrRegExp);
 
 //! Regex to detect PAR2 files from the subject line (case insensitive)
+//! Matches .par2 followed by optional closing quote, then anything, then yEnc (N/N)
 static const QRegularExpression sPar2FileRegExp(
-    "\\.par2\"?\\s*\\(\\d+/\\d+\\)",
+    "\\.par2\"?\\s.*yEnc\\s+\\(\\d+/\\d+\\)",
     QRegularExpression::CaseInsensitiveOption);
 
 //! Regex to extract par2 volume block count from filename like .vol00+05.par2
@@ -389,23 +390,126 @@ bool NzbCheck::hasIntactPar2Metadata() const
     return false;
 }
 
+int NzbCheck::computeHealthScore() const
+{
+    // Health score: 0 (catastrophic) to 100 (perfect)
+    //
+    // Usenet-oriented: files degrade over time (retention), so future recovery
+    // capacity (PAR2 blocks) is MORE important than current data state.
+    //
+    // Criteria:
+    //   1. Data integrity (30 pts): based on % of data articles present
+    //   2. PAR2 recovery capacity (45 pts): effective blocks vs total blocks available
+    //      (this measures resilience — can we recover IF data gets damaged?)
+    //   3. PAR2 metadata availability (10 pts): at least one intact par2 file
+    //   4. Recovery potential (15 pts): if damage occurs, can we actually repair?
+    //      Based on available recovery blocks, NOT on current damage state.
+
+    int score = 0;
+
+    // --- 1. Data integrity: 30 points ---
+    if (_nbDataArticles == 0)
+        score += 30;
+    else
+    {
+        double dataIntegrity = 1.0 - (static_cast<double>(_nbMissingDataArticles) / _nbDataArticles);
+        score += static_cast<int>(dataIntegrity * 30.0);
+    }
+
+    // --- 2. PAR2 recovery capacity: 45 points ---
+    // Measures: what % of PAR2 blocks are still usable?
+    // This is the most critical metric for Usenet: losing PAR2 blocks means
+    // future data loss becomes unrecoverable.
+    int totalBlocks = 0, intactBlocks = 0;
+    if (_par2Volumes.isEmpty())
+    {
+        // No PAR2 at all — zero resilience
+        score += 0;
+    }
+    else
+    {
+        for (const Par2Volume &vol : _par2Volumes)
+        {
+            if (vol.isVolume)
+            {
+                totalBlocks += vol.blocks;
+                if (vol.isIntact())
+                    intactBlocks += vol.blocks;
+            }
+        }
+        if (totalBlocks == 0)
+            score += 0;
+        else
+        {
+            double blockHealth = static_cast<double>(intactBlocks) / totalBlocks;
+            score += static_cast<int>(blockHealth * 45.0);
+        }
+    }
+
+    // --- 3. PAR2 metadata availability: 10 points ---
+    if (_par2Volumes.isEmpty())
+        score += 0;
+    else if (hasIntactPar2Metadata())
+        score += 10;
+    else
+        score += 0;
+
+    // --- 4. Recovery potential: 15 points ---
+    // Reflects: "if data gets damaged, can I repair it?"
+    // This is proportional to available recovery blocks regardless of current damage.
+    // Having 0 effective blocks = 0 points even if data is currently intact,
+    // because any future loss will be unrecoverable.
+    if (_par2Volumes.isEmpty())
+    {
+        score += 0;
+    }
+    else if (totalBlocks == 0)
+    {
+        score += 0;
+    }
+    else
+    {
+        double recoveryPotential = static_cast<double>(intactBlocks) / totalBlocks;
+        score += static_cast<int>(recoveryPotential * 15.0);
+    }
+
+    // --- Cap for unrecoverable state ---
+    // If data is damaged AND recovery is impossible, the NZB is effectively dead.
+    // The score should not exceed 25 regardless of how much data remains intact,
+    // because the practical outcome is the same: the file cannot be reconstructed.
+    if (_nbMissingDataArticles > 0 && !isRecoverable())
+        score = qMin(score, 25);
+
+    return qBound(0, score, 100);
+}
+
 void NzbCheck::printRecoveryAnalysis()
 {
     _cout << "\n" << tr("=== Recovery Analysis ===") << "\n";
     _cout << tr("  Data articles: %1 (missing: %2)").arg(_nbDataArticles).arg(_nbMissingDataArticles) << "\n";
     _cout << tr("  PAR2 articles: %1 (missing: %2)").arg(_nbPar2Articles).arg(_nbMissingPar2Articles) << "\n";
 
+    // --- Early return: no PAR2 files at all ---
     if (_par2Volumes.isEmpty())
     {
         _cout << tr("  PAR2 redundancy: NONE") << "\n";
+        int health = computeHealthScore();
         if (_nbMissingDataArticles > 0)
-            _cout << tr("  Status: UNRECOVERABLE - No PAR2 files in NZB") << "\n" << MB_FLUSH;
+        {
+            _cout << tr("  Status: UNRECOVERABLE - No PAR2 files in NZB") << "\n";
+            _cout << "\n" << tr("  Health: %1/100").arg(health) << "\n";
+            _cout << tr("  >> Dead - unrecoverable, must be re-posted from source") << "\n" << MB_FLUSH;
+        }
         else
-            _cout << tr("  Status: COMPLETE - No missing articles") << "\n" << MB_FLUSH;
+        {
+            _cout << tr("  Status: COMPLETE but UNPROTECTED - No PAR2 files in NZB") << "\n";
+            _cout << "\n" << tr("  Health: %1/100").arg(health) << "\n";
+            _cout << tr("  >> Critical - data intact but no PAR2 exists, no recovery or verification possible") << "\n" << MB_FLUSH;
+        }
         return;
     }
 
-    // Report per-volume status
+    // --- PAR2 volume/block summary ---
     int totalBlocks = 0, intactBlocks = 0;
     int intactVolumes = 0, damagedVolumes = 0;
     for (const Par2Volume &vol : _par2Volumes)
@@ -428,13 +532,30 @@ void NzbCheck::printRecoveryAnalysis()
     _cout << tr("  PAR2 blocks: %1 total, %2 effective (from intact volumes only)").arg(
                  totalBlocks).arg(intactBlocks) << "\n";
 
+    // --- Early return: all PAR2 files damaged (metadata unavailable) ---
     if (!hasIntactPar2Metadata())
     {
         _cout << tr("  WARNING: No intact PAR2 file found - metadata lost!") << "\n";
-        _cout << tr("  Status: UNRECOVERABLE - PAR2 metadata unavailable") << "\n" << MB_FLUSH;
+        int health = computeHealthScore();
+        if (_nbMissingDataArticles > 0)
+        {
+            _cout << tr("  Status: UNRECOVERABLE - PAR2 metadata unavailable") << "\n";
+            _cout << "\n" << tr("  Health: %1/100").arg(health) << "\n";
+            _cout << tr("  >> Dead - data damaged and PAR2 metadata lost, repair impossible without re-post") << "\n" << MB_FLUSH;
+        }
+        else
+        {
+            _cout << tr("  Status: COMPLETE but UNPROTECTED - PAR2 metadata unavailable") << "\n";
+            _cout << "\n" << tr("  Health: %1/100").arg(health) << "\n";
+            _cout << tr("  >> Critical - data intact but all PAR2 damaged, no recovery or verification possible") << "\n" << MB_FLUSH;
+        }
         return;
     }
 
+    // Metadata is available: par2verify can validate data integrity (checksums)
+    _cout << tr("  PAR2 metadata: available (integrity verification possible)") << "\n";
+
+    // --- Debug: per-volume damage detail ---
     if (damagedVolumes > 0 && debugMode())
     {
         _cout << tr("  Damaged volumes detail:") << "\n";
@@ -446,9 +567,10 @@ void NzbCheck::printRecoveryAnalysis()
         }
     }
 
+    // --- Status line: COMPLETE / RECOVERABLE / UNRECOVERABLE ---
     if (_nbMissingDataArticles == 0)
     {
-        _cout << tr("  Status: COMPLETE - No missing data articles") << "\n" << MB_FLUSH;
+        _cout << tr("  Status: COMPLETE - No missing data articles") << "\n";
     }
     else if (isRecoverable())
     {
@@ -456,7 +578,7 @@ void NzbCheck::printRecoveryAnalysis()
         _cout << tr("  Estimated damaged blocks: %1 (block size: %2, article size: %3)").arg(
                      damagedBlocks).arg(_par2BlockSize).arg(_articleSize) << "\n";
         _cout << tr("  Status: RECOVERABLE - %1 damaged block(s), effective recovery blocks: %2").arg(
-                     damagedBlocks).arg(intactBlocks) << "\n" << MB_FLUSH;
+                     damagedBlocks).arg(intactBlocks) << "\n";
     }
     else
     {
@@ -464,6 +586,42 @@ void NzbCheck::printRecoveryAnalysis()
         _cout << tr("  Estimated damaged blocks: %1 (block size: %2, article size: %3)").arg(
                      damagedBlocks).arg(_par2BlockSize).arg(_articleSize) << "\n";
         _cout << tr("  Status: UNRECOVERABLE - %1 damaged block(s), effective recovery blocks: %2").arg(
-                     damagedBlocks).arg(intactBlocks) << "\n" << MB_FLUSH;
+                     damagedBlocks).arg(intactBlocks) << "\n";
     }
+
+    // --- Health score and recommendation ---
+    int health = computeHealthScore();
+    _cout << "\n" << tr("  Health: %1/100").arg(health);
+
+    // Warning for PAR2 degradation even when data is complete
+    // Reports block loss percentage (not article loss) for accuracy
+    if (_nbMissingDataArticles == 0 && _nbMissingPar2Articles > 0)
+    {
+        int lostBlocks = totalBlocks - intactBlocks;
+        double blockLoss = (totalBlocks > 0)
+            ? (static_cast<double>(lostBlocks) / totalBlocks) * 100.0
+            : 0.0;
+        _cout << tr(" [WARNING: %1% of PAR2 recovery blocks lost (%2/%3) - recovery capacity degraded]").arg(
+                     blockLoss, 0, 'f', 1).arg(lostBlocks).arg(totalBlocks);
+    }
+    _cout << "\n";
+
+    // Recommendation thresholds aligned with computeHealthScore() caps:
+    //   >= 90: healthy (all good)
+    //   >= 70: degraded (PAR2 loss but still viable)
+    //   >= 50: at risk (severe PAR2 loss)
+    //   >= 30: critical (barely viable)
+    //   <  30: dead (unrecoverable cap = 25 max)
+    if (health >= 90)
+        _cout << tr("  >> Healthy - data intact, PAR2 redundancy sufficient") << "\n";
+    else if (health >= 70)
+        _cout << tr("  >> Degraded - PAR2 redundancy reduced, re-post PAR2 volumes to restore protection") << "\n";
+    else if (health >= 50)
+        _cout << tr("  >> At risk - significant PAR2 loss, repair possible but redundancy critically low") << "\n";
+    else if (health >= 30)
+        _cout << tr("  >> Critical - repair barely viable, consider re-posting from source") << "\n";
+    else
+        _cout << tr("  >> Dead - unrecoverable, must be re-posted from source") << "\n";
+
+    _cout << MB_FLUSH;
 }

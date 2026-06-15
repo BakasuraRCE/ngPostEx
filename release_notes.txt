@@ -26,6 +26,36 @@ Original: https://github.com/mbruel/ngPost
   Tracks each PAR2 volume individually (all-or-nothing per volume).
   Reports effective recovery blocks from intact volumes only.
 
+- Feature: Health score system (0-100) for NZB integrity assessment.
+  Usenet-oriented scoring: prioritizes future recovery capacity over current state.
+  Criteria weights:
+    - Data integrity: 30 pts (% of data articles present)
+    - PAR2 recovery capacity: 45 pts (effective blocks vs total blocks)
+    - PAR2 metadata availability: 10 pts (at least one intact par2 file)
+    - Recovery potential: 15 pts (proportional to available blocks, regardless of current damage)
+  Hard cap: if data is damaged AND unrecoverable, score is capped at 25 (Dead).
+  Recommendation levels:
+    >= 90: Healthy - data intact, PAR2 redundancy sufficient
+    >= 70: Degraded - PAR2 redundancy reduced, re-post PAR2 to restore protection
+    >= 50: At risk - significant PAR2 loss, repair possible but critically low
+    >= 30: Critical - repair barely viable, consider re-posting from source
+    <  30: Dead - unrecoverable, must be re-posted from source
+  Special cases:
+    - No PAR2 in NZB + data OK: Critical (no recovery or verification possible)
+    - No PAR2 + data missing: Dead
+    - All PAR2 damaged (metadata lost) + data OK: Critical
+    - All PAR2 damaged + data missing: Dead
+  Warning message reports PAR2 block loss (not article loss) for accuracy.
+
+- Fix: PAR2 subject detection regex now requires yEnc marker.
+  Previous regex could false-match non-PAR2 subjects containing ".par2".
+  New pattern: .par2"?\s.*yEnc\s+(\d+/\d+)
+
+- Fix: yEnc subject regex for article count extraction relaxed.
+  Previous regex required exact format ^[N/N] subject (N/N)$.
+  New pattern matches "yEnc (N/N)" anywhere in subject, compatible with
+  more posters (nyuu, ParPar, etc.).
+
 - Feature: New --par2_block_size option for --check.
   Allows specifying the PAR2 block size used when the NZB was created.
   Defaults to article_size (~700KB). Users of ParPar with large block sizes
@@ -39,6 +69,17 @@ Original: https://github.com/mbruel/ngPost
 
 - Internal: NzbCheck refactored with per-volume PAR2 tracking (Par2Volume struct),
   metadata availability detection, and configurable block/article size ratio.
+
+- Improvement: Per-article "Missing Article on server" log moved to debug mode only.
+  Previously printed every missing article ID to stdout (extremely verbose with
+  thousands of missing articles). Now only shown with --debug flag.
+  Normal mode shows only the progress bar counter and final summary.
+
+- Feature: PAR2 metadata status shown in recovery analysis output.
+  When metadata is available (at least one intact PAR2 file), reports
+  "PAR2 metadata: available (integrity verification possible)" to inform
+  users they can run par2verify to validate data checksums even when
+  recovery blocks are insufficient for repair.
 
 
 ####################################################

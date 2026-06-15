@@ -122,22 +122,62 @@ Assurez-vous qu'au moins un serveur dans votre config a `nzbCheck = true`.
 
 #### Analyse de récupération
 
-Après la vérification, ngPostEx analyse la structure PAR2 du NZB et indique si le contenu est récupérable malgré les articles manquants. Le résultat ressemble à :
+Après la vérification, ngPostEx analyse la structure PAR2 du NZB et indique si le contenu est récupérable malgré les articles manquants. Le résultat inclut un score de santé conçu pour le modèle de dégradation d'Usenet (les fichiers disparaissent avec le temps à mesure que la rétention expire).
 
+Exemple de sortie :
 ```
 === Recovery Analysis ===
   Data articles: 950 (missing: 12)
   PAR2 articles: 85 (missing: 3)
   PAR2 volumes: 4 intact, 1 damaged (of 5 total)
   PAR2 blocks: 63 total, 47 effective (from intact volumes only)
+  PAR2 metadata: available (integrity verification possible)
   Estimated damaged blocks: 12 (block size: 716800, article size: 716800)
   Status: RECOVERABLE - 12 damaged block(s), effective recovery blocks: 47
+
+  Health: 82/100
+  >> Degraded - PAR2 redundancy reduced, re-post PAR2 volumes to restore protection
 ```
 
 Les statuts possibles sont :
-- **COMPLETE** — aucun article manquant, rien à réparer
+- **COMPLETE** — aucun article de données manquant, rien à réparer
 - **RECOVERABLE** — les données manquantes peuvent être réparées avec les blocs PAR2 disponibles
 - **UNRECOVERABLE** — pas assez de blocs PAR2 pour réparer les données manquantes
+
+#### Score de santé (0-100)
+
+Le score reflète la viabilité à long terme du NZB sur Usenet. Il privilégie la **capacité de récupération future** (blocs PAR2) par rapport à l'état actuel des données, car les articles se dégradent avec le temps à mesure que les serveurs expirent leur rétention.
+
+**Critères de notation :**
+
+| Critère | Poids | Description |
+|---------|-------|-------------|
+| Intégrité des données | 30 pts | % d'articles de données actuellement présents |
+| Capacité de récupération PAR2 | 45 pts | % de blocs PAR2 encore utilisables (volumes intacts uniquement) |
+| Métadonnées PAR2 | 10 pts | Au moins un fichier PAR2 intact existe (nécessaire pour la réparation) |
+| Potentiel de récupération | 15 pts | Proportionnel aux blocs disponibles — mesure la capacité à réparer des dommages futurs |
+
+**Plafond strict :** Si les données sont endommagées ET la récupération est impossible, le score est plafonné à 25 quel que soit le reste (le NZB est effectivement mort).
+
+**Niveaux de recommandation :**
+
+| Score | Niveau | Signification |
+|-------|--------|---------------|
+| ≥ 90 | Healthy | Données intactes, redondance PAR2 suffisante |
+| ≥ 70 | Degraded | Redondance PAR2 réduite, re-poster les volumes PAR2 pour restaurer la protection |
+| ≥ 50 | At risk | Perte significative de PAR2, réparation possible mais redondance critique |
+| ≥ 30 | Critical | Réparation à peine viable, envisager un re-post depuis la source |
+| < 30 | Dead | Irrécupérable, doit être re-posté depuis la source |
+
+**Cas spéciaux :**
+
+| Condition | Message |
+|-----------|---------|
+| Pas de PAR2 dans le NZB, données intactes | Critical — pas de récupération ni vérification possible |
+| Pas de PAR2, données manquantes | Dead — irrécupérable |
+| Tous les PAR2 endommagés (métadonnées perdues), données intactes | Critical — pas de récupération ni vérification possible |
+| Tous les PAR2 endommagés, données manquantes | Dead — réparation impossible sans re-post |
+| Données complètes, PAR2 partiellement endommagés | Avertissement indiquant le % de blocs PAR2 perdus (pas d'articles) |
 
 #### Fonctionnement de l'analyse
 

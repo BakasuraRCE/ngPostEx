@@ -61,7 +61,7 @@ class NzbCheck : public QObject
     Q_OBJECT
 
 private:
-    static constexpr const char *sNntpArticleYencSubjectStrRegExp = "^\\[\\d+/\\d+\\]\\s+.+\\(\\d+/(\\d+)\\)$";
+    static constexpr const char *sNntpArticleYencSubjectStrRegExp = "yEnc\\s+\\(\\d+/(\\d+)\\)";
 
     QString           _nzbPath;
     QStack<QString>   _articles;
@@ -148,6 +148,7 @@ public:
     int effectiveRecoveryBlocks() const;
     bool hasIntactPar2Metadata() const;
     bool isRecoverable() const;
+    int computeHealthScore() const;
     void printRecoveryAnalysis();
 
 
@@ -181,7 +182,7 @@ int NzbCheck::socketTimeOut() const { return _socketTimeOut; }
 
 void NzbCheck::missingArticle(const QString &article)
 {
-    if (!_quietMode)
+    if (debugMode())
         _cout << (_dispProgressBar ? "\n" : "")
               << tr("+ Missing Article on server: ") << article << "\n" << MB_FLUSH;
     ++_nbMissingArticles;
